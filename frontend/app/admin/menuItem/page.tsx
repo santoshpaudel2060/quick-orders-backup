@@ -1,7 +1,7 @@
 "use client";
 
+import axios from "axios";
 import { useState, useEffect } from "react";
-import { api } from "../../libs/api";
 import toast from "react-hot-toast";
 
 interface MenuItem {
@@ -11,6 +11,8 @@ interface MenuItem {
   price: number;
   image: string;
 }
+
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function MenuItemPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -35,7 +37,7 @@ export default function MenuItemPage() {
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/menus");
+      const response = await axios.get(`${apiURL}/api/menus`);
       setMenuItems(response.data);
     } catch (error) {
       toast.error("Failed to load menu items");
@@ -119,17 +121,21 @@ export default function MenuItemPage() {
     try {
       let response;
       if (editingItem) {
-        response = await api.put(`/menus/${editingItem._id}`, submitData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        response = await axios.put(
+          `${apiURL}/api/menus/${editingItem._id}`,
+          submitData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
         setMenuItems(
           menuItems.map((item) =>
-            item._id === editingItem._id ? response.data.menuItem : item
-          )
+            item._id === editingItem._id ? response.data.menuItem : item,
+          ),
         );
         toast.success("Menu item updated successfully!");
       } else {
-        response = await api.post("/menus/create", submitData, {
+        response = await axios.post(`${apiURL}/menus/create`, submitData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setMenuItems([...menuItems, response.data.menuItem]);
@@ -147,7 +153,7 @@ export default function MenuItemPage() {
     if (!deleteConfirmId) return;
 
     try {
-      await api.delete(`/menus/${deleteConfirmId}`);
+      await axios.delete(`${apiURL}/api/menus/${deleteConfirmId}`);
       setMenuItems(menuItems.filter((item) => item._id !== deleteConfirmId));
       toast.success("Item deleted successfully");
       setDeleteConfirmId(null);

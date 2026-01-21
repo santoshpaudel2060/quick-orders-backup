@@ -16,15 +16,17 @@ interface CreateTableForm {
   tableNumber: number;
 }
 
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
+
 /* ================= API ================= */
 const fetchTables = async (): Promise<Table[]> => {
-  const res = await fetch("http://localhost:5000/api/tables/");
+  const res = await fetch(`${apiURL}/api/tables/`);
   if (!res.ok) throw new Error("Failed to fetch tables");
   return res.json();
 };
 
 const createTableAPI = async (tableNumber: number) => {
-  const res = await fetch("http://localhost:5000/api/tables/create", {
+  const res = await fetch(`${apiURL}/api/tables/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tableNumber }),
@@ -36,19 +38,16 @@ const createTableAPI = async (tableNumber: number) => {
 };
 
 const deleteTableAPI = async (tableNumber: number) => {
-  const res = await fetch(`http://localhost:5000/api/tables/${tableNumber}`, {
+  const res = await fetch(`${apiURL}/api/tables/${tableNumber}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Failed to delete");
 };
 
 const freeTableAPI = async (tableNumber: number) => {
-  const res = await fetch(
-    `http://localhost:5000/api/tables/free/${tableNumber}`,
-    {
-      method: "POST",
-    }
-  );
+  const res = await fetch(`${apiURL}/api/tables/free/${tableNumber}`, {
+    method: "POST",
+  });
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.message || "Failed to free table");
@@ -175,8 +174,8 @@ export default function TablePage() {
             table.status === "available"
               ? "border-green-500 bg-green-50"
               : table.status === "occupied"
-              ? "border-red-500 bg-red-50"
-              : "border-blue-500 bg-blue-50";
+                ? "border-red-500 bg-red-50"
+                : "border-blue-500 bg-blue-50";
 
           return (
             <div

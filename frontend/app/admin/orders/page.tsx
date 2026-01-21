@@ -262,7 +262,7 @@ interface Order {
   updatedAt: string;
 }
 
-const API_BASE_URL = "http://localhost:5000/api";
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -274,7 +274,7 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/orders`);
+      const response = await axios.get(`${apiURL}/api/orders`);
 
       // Sort by most recent first
       const sortedOrders = response.data.sort(
@@ -306,7 +306,7 @@ export default function OrdersPage() {
     newStatus: "pending" | "preparing" | "ready" | "served",
   ) => {
     try {
-      await axios.patch(`${API_BASE_URL}/orders/${orderId}/status`, {
+      await axios.patch(`${apiURL}/api/orders/${orderId}/status`, {
         status: newStatus,
       });
 
@@ -323,7 +323,7 @@ export default function OrdersPage() {
     if (!confirm("Are you sure you want to delete this order?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/orders/${orderId}`);
+      await axios.delete(`${apiURL}/api/orders/${orderId}`);
       toast.success("Order deleted successfully");
       fetchOrders();
     } catch (error) {
