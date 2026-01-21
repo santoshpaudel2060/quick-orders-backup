@@ -12,6 +12,7 @@ type FormData = {
   phone: string;
   password: string;
 };
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Signup() {
   const router = useRouter();
@@ -25,10 +26,7 @@ export default function Signup() {
   // React Query mutation for signup
   const signupMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        data
-      );
+      const response = await axios.post(`${apiURL}/api/auth/register`, data);
       return response.data;
     },
     onSuccess: (data) => {

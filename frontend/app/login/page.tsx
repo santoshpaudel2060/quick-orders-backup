@@ -10,6 +10,7 @@ type FormData = {
   email: string;
   password: string;
 };
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Login() {
   const router = useRouter();
@@ -23,10 +24,7 @@ export default function Login() {
   // React Query mutation for login
   const loginMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        data
-      );
+      const response = await axios.post(`${apiURL}/api/auth/login`, data);
       return response.data;
     },
 
