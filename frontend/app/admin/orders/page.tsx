@@ -238,7 +238,8 @@
 //       </div>
 //     </div>
 //   );
-// }"use client";
+// }
+"use client";
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -278,7 +279,7 @@ export default function OrdersPage() {
       // Sort by most recent first
       const sortedOrders = response.data.sort(
         (a: Order, b: Order) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
       setOrders(sortedOrders);
@@ -302,7 +303,7 @@ export default function OrdersPage() {
   // Update order status
   const updateOrderStatus = async (
     orderId: string,
-    newStatus: "pending" | "preparing" | "ready" | "served"
+    newStatus: "pending" | "preparing" | "ready" | "served",
   ) => {
     try {
       await axios.patch(`${API_BASE_URL}/orders/${orderId}/status`, {
@@ -554,7 +555,7 @@ export default function OrdersPage() {
                   <div className="flex items-center gap-3">
                     <span
                       className={`px-5 py-2 rounded-full text-sm font-black uppercase border-2 ${getStatusColor(
-                        order.status
+                        order.status,
                       )}`}
                     >
                       {order.status}

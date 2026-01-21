@@ -67,7 +67,7 @@ interface EsewaPaymentData {
   signature: string;
 }
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   // Stage management
@@ -127,7 +127,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
   // Validate table number exists in database and is available
   const validateTable = (
-    tableNum: number
+    tableNum: number,
   ): { valid: boolean; message?: string } => {
     if (!tables) return { valid: false, message: "Loading tables..." };
 
@@ -194,7 +194,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       ) {
         try {
           const response = await axios.get(
-            `${API_BASE_URL}/orders/table/${tableNumber}`
+            `${API_BASE_URL}/orders/table/${tableNumber}`,
           );
 
           const customerOrders = response.data.filter((order: Order) => {
@@ -363,7 +363,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
     if (success) {
       toast.success(
-        `Welcome ${customerId}! Table ${tableNumber} is now yours.`
+        `Welcome ${customerId}! Table ${tableNumber} is now yours.`,
       );
       setStage("menu");
     }
@@ -378,8 +378,8 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
         cart.map((cartItem) =>
           cartItem._id === item._id
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        )
+            : cartItem,
+        ),
       );
     } else {
       setCart([...cart, { ...item, quantity: 1 }]);
@@ -395,7 +395,9 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       removeFromCart(itemId);
     } else {
       setCart(
-        cart.map((item) => (item._id === itemId ? { ...item, quantity } : item))
+        cart.map((item) =>
+          item._id === itemId ? { ...item, quantity } : item,
+        ),
       );
     }
   };
@@ -454,7 +456,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
           tableNumber: tableNumber,
           total,
           customerId,
-        }
+        },
       );
 
       setPaymentQR(qrResponse.data);
@@ -516,7 +518,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
       try {
         const deleteResponse = await axios.delete(
-          `${API_BASE_URL}/orders/customer/${tableNumber}/${customerId}`
+          `${API_BASE_URL}/orders/customer/${tableNumber}/${customerId}`,
         );
         console.log("Orders deleted:", deleteResponse.data);
       } catch (deleteError) {
@@ -1082,7 +1084,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
                     </div>
                     <span
                       className={`px-4 py-2 rounded-full text-sm font-black uppercase border-2 ${getStatusColor(
-                        order.status
+                        order.status,
                       )}`}
                     >
                       {order.status}
