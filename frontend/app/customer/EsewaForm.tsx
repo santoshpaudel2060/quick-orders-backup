@@ -36,6 +36,8 @@ interface EsewaFormProps {
   onPaymentSuccess?: () => void;
 }
 
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
+
 const EsewaForm: React.FC<EsewaFormProps> = ({
   deliveryName,
   deliveryLocation,
@@ -64,16 +66,16 @@ const EsewaForm: React.FC<EsewaFormProps> = ({
       };
 
       // STEP 1: Place order
-      await axios.post("http://localhost:4000/api/orders/place", orderPayload);
+      await axios.post(`${apiURL}/api/orders/place`, orderPayload);
 
       // STEP 2: Reduce stock
       for (const item of items) {
         const stockRes = await axios.post(
-          "http://localhost:4000/api/product/reduce-stock",
+          `${apiURL}/api/product/reduce-stock`,
           {
             productId: item.id,
             quantity: item.quantity,
-          }
+          },
         );
 
         if (!stockRes.data.success) {
@@ -95,8 +97,8 @@ const EsewaForm: React.FC<EsewaFormProps> = ({
       };
 
       const res = await axios.post<{ formData: EsewaFormData }>(
-        "http://localhost:4000/api/esewa/initiate-payment",
-        paymentPayload
+        `${apiURL}/api/esewa/initiate-payment`,
+        paymentPayload,
       );
 
       setFormData(res.data.formData);
@@ -104,7 +106,7 @@ const EsewaForm: React.FC<EsewaFormProps> = ({
       // STEP 4: Submit form
       setTimeout(() => {
         const form = document.getElementById(
-          "esewaForm"
+          "esewaForm",
         ) as HTMLFormElement | null;
 
         form?.submit();
@@ -113,7 +115,7 @@ const EsewaForm: React.FC<EsewaFormProps> = ({
     } catch (error: any) {
       console.error("Payment failed:", error);
       toast.error(
-        error?.response?.data?.message || "Checkout failed. Try again."
+        error?.response?.data?.message || "Checkout failed. Try again.",
       );
     }
   };
