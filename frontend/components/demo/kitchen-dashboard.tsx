@@ -456,7 +456,7 @@ import toast from "react-hot-toast";
 
 import ioClient, { Socket } from "socket.io-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 interface OrderItem {
   name: string;
@@ -501,7 +501,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token");
 
-        const res = await axios.get(`${API_URL}/api/auth/me`, {
+        const res = await axios.get(`${apiURL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -522,7 +522,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
   // Fetch orders
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/orders`);
+      const response = await axios.get(`${apiURL}/api/orders`);
       const activeOrders = response.data.filter(
         (order: Order) => order.status !== "served",
       );
@@ -539,7 +539,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     fetchOrders();
 
-    socket = ioClient(API_URL);
+    socket = ioClient(apiURL);
 
     socket.on("new-order", (order: Order) => {
       setOrders((prev) => [order, ...prev]);
@@ -581,7 +581,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
         );
       }
 
-      await axios.put(`${API_URL}/api/orders/${orderId}/status`, {
+      await axios.put(`${apiURL}/api/orders/${orderId}/status`, {
         status: newStatus,
       });
 
@@ -599,7 +599,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
     const original = [...orders];
     try {
       setOrders(orders.filter((o) => o._id !== orderId));
-      await axios.delete(`${API_URL}/api/orders/${orderId}`);
+      await axios.delete(`${apiURL}/api/orders/${orderId}`);
       toast.success("Order cancelled");
       fetchOrders();
     } catch (err) {

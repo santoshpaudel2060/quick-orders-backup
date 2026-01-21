@@ -425,6 +425,8 @@ interface CurrentUser {
   role: string;
 }
 
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function AdminPanel({ onBack }: { onBack: () => void }) {
   const router = useRouter();
 
@@ -450,7 +452,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token");
 
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${apiURL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -471,7 +473,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
     const fetchRealTables = async () => {
       try {
         setLoadingTables(true);
-        const res = await axios.get("http://localhost:5000/api/tables");
+        const res = await axios.get(`${apiURL}/api/tables`);
         setRealTables(res.data);
       } catch (error) {
         console.error("Failed to fetch tables:", error);
@@ -499,9 +501,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
       const fetchPayments = async () => {
         try {
           setLoadingPayments(true);
-          const res = await axios.get(
-            "http://localhost:5000/api/payments/admin/payments"
-          );
+          const res = await axios.get(`${apiURL}/api/payments/admin/payments`);
 
           const paymentsArray = Array.isArray(res.data)
             ? res.data
@@ -704,8 +704,8 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
                             table.status === "available"
                               ? "border-green-300 bg-green-50"
                               : table.status === "occupied"
-                              ? "border-orange-300 bg-orange-50"
-                              : "border-purple-300 bg-purple-50"
+                                ? "border-orange-300 bg-orange-50"
+                                : "border-purple-300 bg-purple-50"
                           }`}
                         >
                           <div className="flex justify-between items-center mb-3">
@@ -717,8 +717,8 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
                                 table.status === "available"
                                   ? "bg-green-500 text-white"
                                   : table.status === "occupied"
-                                  ? "bg-orange-500 text-white"
-                                  : "bg-purple-500 text-white"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-purple-500 text-white"
                               }`}
                             >
                               {table.status}
@@ -811,8 +811,8 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
                                 p.status === "completed"
                                   ? "bg-green-100 text-green-700"
                                   : p.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
                               }`}
                             >
                               {p.status}

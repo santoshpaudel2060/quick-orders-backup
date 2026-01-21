@@ -67,7 +67,7 @@ interface EsewaPaymentData {
   signature: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   // Stage management
@@ -120,7 +120,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   } = useQuery<Table[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axios.get(`${API_BASE_URL}/tables/`);
+      const res = await axios.get(`${apiURL}/tables/`);
       return res.data;
     },
   });
@@ -147,7 +147,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   // Occupy table when customer enters their name
   const occupyTable = async (tableNum: number, customerName: string) => {
     try {
-      await axios.post(`${API_BASE_URL}/tables/occupy`, {
+      await axios.post(`${apiURL}/tables/occupy`, {
         tableNumber: tableNum,
         customerId: customerName,
       });
@@ -170,7 +170,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       if (stage === "menu") {
         try {
           setLoading(true);
-          const response = await axios.get(`${API_BASE_URL}/menus`);
+          const response = await axios.get(`${apiURL}/menus`);
           setMenuItems(response.data);
         } catch (error) {
           console.error("Failed to fetch menu:", error);
@@ -194,7 +194,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       ) {
         try {
           const response = await axios.get(
-            `${API_BASE_URL}/orders/table/${tableNumber}`,
+            `${apiURL}/orders/table/${tableNumber}`,
           );
 
           const customerOrders = response.data.filter((order: Order) => {
@@ -424,7 +424,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/orders/add`, {
+      await axios.post(`${apiURL}/orders/add`, {
         tableNumber: tableNumber,
         customerId,
         items: cart.map((item) => ({
@@ -450,14 +450,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     const total = calculateGrandTotal();
 
     try {
-      const qrResponse = await axios.post(
-        `${API_BASE_URL}/orders/generate-qr`,
-        {
-          tableNumber: tableNumber,
-          total,
-          customerId,
-        },
-      );
+      const qrResponse = await axios.post(`${apiURL}/orders/generate-qr`, {
+        tableNumber: tableNumber,
+        total,
+        customerId,
+      });
 
       setPaymentQR(qrResponse.data);
       setStage("payment");
@@ -479,7 +476,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       const grandTotal = calculateGrandTotal();
       const finalTotal = grandTotal;
 
-      const response = await axios.post(`${API_BASE_URL}/payments/initiate`, {
+      const response = await axios.post(`${apiURL}/payments/initiate`, {
         tableNumber,
         customerId,
         totalAmount: grandTotal,
@@ -518,7 +515,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
       try {
         const deleteResponse = await axios.delete(
-          `${API_BASE_URL}/orders/customer/${tableNumber}/${customerId}`,
+          `${apiURL}/orders/customer/${tableNumber}/${customerId}`,
         );
         console.log("Orders deleted:", deleteResponse.data);
       } catch (deleteError) {
@@ -526,7 +523,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       }
 
       try {
-        await axios.post(`${API_BASE_URL}/tables/free`, {
+        await axios.post(`${apiURL}/tables/free`, {
           tableNumber: tableNumber,
           customerId: customerId,
         });
@@ -534,7 +531,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       } catch (freeError) {
         console.error("Failed to free table:", freeError);
         try {
-          await axios.post(`${API_BASE_URL}/tables/free/${tableNumber}`);
+          await axios.post(`${apiURL}/tables/free/${tableNumber}`);
           console.log("Table freed via alternative endpoint");
         } catch (altError) {
           console.error("Alternative free endpoint also failed:", altError);
