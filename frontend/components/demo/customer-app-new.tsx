@@ -120,7 +120,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   } = useQuery<Table[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axios.get(`${apiURL}/tables/`);
+      const res = await axios.get(`${apiURL}/api/tables/`);
       return res.data;
     },
   });
@@ -147,7 +147,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   // Occupy table when customer enters their name
   const occupyTable = async (tableNum: number, customerName: string) => {
     try {
-      await axios.post(`${apiURL}/tables/occupy`, {
+      await axios.post(`${apiURL}/api/tables/occupy`, {
         tableNumber: tableNum,
         customerId: customerName,
       });
@@ -170,7 +170,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       if (stage === "menu") {
         try {
           setLoading(true);
-          const response = await axios.get(`${apiURL}/menus`);
+          const response = await axios.get(`${apiURL}/api/menus`);
           setMenuItems(response.data);
         } catch (error) {
           console.error("Failed to fetch menu:", error);
@@ -194,7 +194,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       ) {
         try {
           const response = await axios.get(
-            `${apiURL}/orders/table/${tableNumber}`,
+            `${apiURL}/api/orders/table/${tableNumber}`,
           );
 
           const customerOrders = response.data.filter((order: Order) => {
@@ -424,7 +424,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     }
 
     try {
-      await axios.post(`${apiURL}/orders/add`, {
+      await axios.post(`${apiURL}/api/orders/add`, {
         tableNumber: tableNumber,
         customerId,
         items: cart.map((item) => ({
@@ -450,7 +450,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     const total = calculateGrandTotal();
 
     try {
-      const qrResponse = await axios.post(`${apiURL}/orders/generate-qr`, {
+      const qrResponse = await axios.post(`${apiURL}/api/orders/generate-qr`, {
         tableNumber: tableNumber,
         total,
         customerId,
@@ -476,7 +476,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       const grandTotal = calculateGrandTotal();
       const finalTotal = grandTotal;
 
-      const response = await axios.post(`${apiURL}/payments/initiate`, {
+      const response = await axios.post(`${apiURL}/api/payments/initiate`, {
         tableNumber,
         customerId,
         totalAmount: grandTotal,
@@ -515,7 +515,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
       try {
         const deleteResponse = await axios.delete(
-          `${apiURL}/orders/customer/${tableNumber}/${customerId}`,
+          `${apiURL}/api/orders/customer/${tableNumber}/${customerId}`,
         );
         console.log("Orders deleted:", deleteResponse.data);
       } catch (deleteError) {
@@ -523,7 +523,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       }
 
       try {
-        await axios.post(`${apiURL}/tables/free`, {
+        await axios.post(`${apiURL}/api/tables/free`, {
           tableNumber: tableNumber,
           customerId: customerId,
         });
@@ -531,7 +531,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       } catch (freeError) {
         console.error("Failed to free table:", freeError);
         try {
-          await axios.post(`${apiURL}/tables/free/${tableNumber}`);
+          await axios.post(`${apiURL}/api/tables/free/${tableNumber}`);
           console.log("Table freed via alternative endpoint");
         } catch (altError) {
           console.error("Alternative free endpoint also failed:", altError);
