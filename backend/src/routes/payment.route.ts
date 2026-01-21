@@ -685,7 +685,7 @@ const config = ESEWA_CONFIG.demo;
 const generateSignature = (
   totalAmount: string | number,
   transactionUuid: string,
-  productCode: string
+  productCode: string,
 ): string => {
   const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
   return crypto
@@ -802,7 +802,7 @@ router.post("/initiate", async (req: Request, res: Response) => {
     const signature = generateSignature(
       grandTotal.toFixed(2),
       transactionUuid,
-      config.merchantCode
+      config.merchantCode,
     );
 
     // Create payment with link to order and customer name
@@ -862,7 +862,7 @@ router.get("/success", async (req: Request, res: Response) => {
     }
 
     const decodedData = JSON.parse(
-      Buffer.from(data, "base64").toString("utf-8")
+      Buffer.from(data, "base64").toString("utf-8"),
     );
     console.log("Success: Decoded data", decodedData);
 
@@ -895,12 +895,17 @@ router.get("/success", async (req: Request, res: Response) => {
 
     // Verify with eSewa API
     const verificationResponse = await axios.get(
-      `${config.verificationUrl}?product_code=${decodedData.product_code}&total_amount=${decodedData.total_amount}&transaction_uuid=${decodedData.transaction_uuid}`
+      `${config.verificationUrl}?product_code=${decodedData.product_code}&total_amount=${decodedData.total_amount}&transaction_uuid=${decodedData.transaction_uuid}`,
     );
     console.log("eSewa verification:", verificationResponse.data);
 
+    const verificationData = verificationResponse.data as {
+      status: string;
+      [key: string]: any;
+    };
+
     let status: "completed" | "failed" = "failed";
-    if (verificationResponse.data.status === "COMPLETE") {
+    if (verificationData.status === "COMPLETE") {
       status = "completed";
     }
 
@@ -912,7 +917,7 @@ router.get("/success", async (req: Request, res: Response) => {
         transactionCode: decodedData.transaction_code,
         rawResponse: decodedData,
       },
-      { new: true }
+      { new: true },
     );
 
     console.log("Payment updated to:", updatedPayment?.status);
@@ -942,13 +947,13 @@ router.get("/failure", async (req: Request, res: Response) => {
     }
 
     const decodedData = JSON.parse(
-      Buffer.from(data, "base64").toString("utf-8")
+      Buffer.from(data, "base64").toString("utf-8"),
     );
     console.log("Failure: Payment failed", decodedData);
 
     await Payment.findOneAndUpdate(
       { transactionUuid: decodedData.transaction_uuid },
-      { status: "failed", rawResponse: decodedData }
+      { status: "failed", rawResponse: decodedData },
     );
 
     res.redirect(`${req.headers.origin}/payment-failure`);
