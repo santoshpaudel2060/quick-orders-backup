@@ -560,6 +560,12 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
       toast.success(`Table ${tableNumber} is now available`);
     });
 
+    // remove deleted/cancelled orders in real-time
+    socket.on("order:deleted", ({ orderId }: { orderId: string }) => {
+      setOrders((prev) => prev.filter((o) => o._id !== orderId));
+      toast.success(`Order ${orderId} cancelled`);
+    });
+
     return () => {
       socket.disconnect();
     };

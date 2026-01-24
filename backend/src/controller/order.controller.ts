@@ -209,7 +209,8 @@ export const deleteOrder = async (req: Request, res: Response) => {
     );
 
     const io = req.app.get("io");
-    io.emit("table-freed", order.tableNumber);
+    io.emit("order:deleted", { orderId: order._id }); // kitchen removes order
+    io.emit("table-freed", order.tableNumber); // frontend updates table
 
     console.log(`Table ${order.tableNumber} freed after order deletion`);
 
