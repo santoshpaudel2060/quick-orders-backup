@@ -103,6 +103,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const frontendUrl = process.env.NEXT_PUBLIC_API_URL;
+
 export default function PaymentSuccess() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +140,7 @@ export default function PaymentSuccess() {
 
       // Call your backend to get tableNumber and free the table
       axios
-        .post("http://localhost:5000/api/tables/free-by-uuid", {
+        .post(`${frontendUrl}/api/tables/free-by-uuid`, {
           transactionUuid,
         })
         .then((res) => {
@@ -150,7 +152,7 @@ export default function PaymentSuccess() {
         .catch((err) => {
           console.error("Failed to free table:", err.response?.data || err);
           alert(
-            "Payment successful, but failed to free table. Please inform staff."
+            "Payment successful, but failed to free table. Please inform staff.",
           );
         })
         .finally(() => {
