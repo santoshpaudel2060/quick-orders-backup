@@ -425,8 +425,6 @@ interface CurrentUser {
   role: string;
 }
 
-const apiURL = process.env.NEXT_PUBLIC_API_URL;
-
 export default function AdminPanel({ onBack }: { onBack: () => void }) {
   const router = useRouter();
 
@@ -452,7 +450,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token");
 
-        const res = await axios.get(`${apiURL}/api/auth/me`, {
+        const res = await axios.get("http://localhost:5000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -473,7 +471,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
     const fetchRealTables = async () => {
       try {
         setLoadingTables(true);
-        const res = await axios.get(`${apiURL}/api/tables`);
+        const res = await axios.get("http://localhost:5000/api/tables");
         setRealTables(res.data);
       } catch (error) {
         console.error("Failed to fetch tables:", error);
@@ -501,7 +499,9 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
       const fetchPayments = async () => {
         try {
           setLoadingPayments(true);
-          const res = await axios.get(`${apiURL}/api/payments/admin/payments`);
+          const res = await axios.get(
+            "http://localhost:5000/api/payments/admin/payments",
+          );
 
           const paymentsArray = Array.isArray(res.data)
             ? res.data
