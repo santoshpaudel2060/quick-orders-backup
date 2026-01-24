@@ -59,14 +59,57 @@ router.delete("/:orderId", async (req, res) => {
   }
 });
 
-// DELETE /api/orders/:orderId
+// // DELETE /api/orders/:orderId
+// router.delete("/:orderId", async (req, res) => {
+//   try {
+//     const { orderId } = req.params;
+
+//     // Find the order first
+//     const order = await OrderModel.findById(orderId);
+
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Order not found",
+//       });
+//     }
+
+//     // Only pending orders can be cancelled
+//     if (order.status !== "pending") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Only pending orders can be cancelled",
+//       });
+//     }
+
+//     // Delete the order
+//     await OrderModel.findByIdAndDelete(orderId);
+//     const io = req.app.get("io");
+//     // Emit socket event for kitchen (real-time update)
+//     io.emit("order:deleted", { orderId });
+
+//     console.log(`[CANCEL ORDER] Order ID: ${orderId} cancelled by customer`);
+
+//     return res.json({
+//       success: true,
+//       message: "Order cancelled successfully",
+//       orderId,
+//     });
+//   } catch (err) {
+//     console.error("[CANCEL ORDER ERROR]", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to cancel order",
+//     });
+//   }
+// });
+
 router.delete("/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    // Find the order first
+    // Find the order
     const order = await OrderModel.findById(orderId);
-
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -74,7 +117,7 @@ router.delete("/:orderId", async (req, res) => {
       });
     }
 
-    // Check if order is pending
+    // Only pending orders can be cancelled
     if (order.status !== "pending") {
       return res.status(400).json({
         success: false,
@@ -86,6 +129,9 @@ router.delete("/:orderId", async (req, res) => {
     await OrderModel.findByIdAndDelete(orderId);
 
     console.log(`[CANCEL ORDER] Order ID: ${orderId} cancelled by customer`);
+    const io = req.app.get("io");
+    // Emit real-time event to kitchen
+    io.emit("order-cancelled", { orderId });
 
     return res.json({
       success: true,
