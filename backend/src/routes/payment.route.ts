@@ -658,10 +658,6 @@ interface EsewaEnvConfig {
   secretKey: string;
 }
 
-const success_url = process.env.ESEWA_SUCCESS_URL;
-const failure_url = process.env.ESEWA_FAILURE_URL;
-const frontend_url = process.env.FRONTEND_URL;
-
 const ESEWA_CONFIG: {
   demo: EsewaEnvConfig;
   production: EsewaEnvConfig;
@@ -829,8 +825,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       product_service_charge: "0",
       product_delivery_charge: "0",
 
-      success_url: success_url,
-      failure_url: failure_url,
+      success_url: process.env.ESEWA_SUCCESS_URL,
+      failure_url: process.env.ESEWA_FAILURE_URL,
 
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,
@@ -862,7 +858,7 @@ router.get("/success", async (req: Request, res: Response) => {
     const { data } = req.query as { data?: string };
     if (!data) {
       console.log("Success: No data received");
-      return res.redirect(`${frontend_url}/payment-failure`);
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
     }
 
     const decodedData = JSON.parse(
@@ -893,7 +889,7 @@ router.get("/success", async (req: Request, res: Response) => {
 
     if (decodedData.signature !== expectedSignature) {
       console.log("❌ Invalid signature - rejecting");
-      return res.redirect(`${frontend_url}/payment-failure`);
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
     }
     // === END FIX ===
 
@@ -933,6 +929,7 @@ router.get("/success", async (req: Request, res: Response) => {
         : `${process.env.FRONTEND_URL}/payment-failure`;
 
     res.redirect(frontendUrl);
+    console.log("Success: Redirecting to", frontendUrl);
   } catch (error: any) {
     console.error("Success route error:", error);
     res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
