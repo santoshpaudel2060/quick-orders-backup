@@ -30,34 +30,73 @@ router.put("/:id/status", updateOrderStatus);
 
 // Delete order
 // router.delete("/:id", deleteOrder);
-
-router.delete("/customer/:tableNumber/:customerId", async (req, res) => {
+router.delete("/:orderId", async (req, res) => {
   try {
-    const { tableNumber, customerId } = req.params;
+    const { orderId } = req.params;
 
-    console.log(
-      `[DELETE ORDERS] Table: ${tableNumber}, Customer: ${customerId}`
-    );
+    const deletedOrder = await OrderModel.findByIdAndDelete(orderId);
 
-    // Delete all orders for this customer at this table
-    const result = await OrderModel.deleteMany({
-      tableNumber: parseInt(tableNumber),
-      customerId: customerId,
-    });
+    if (!deletedOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    console.log(`[DELETE ORDERS] Deleted ${result.deletedCount} orders`);
+    console.log(`[CANCEL ORDER] Order ID: ${orderId} deleted`);
 
-    res.json({
+    return res.json({
       success: true,
-      message: `Deleted ${result.deletedCount} orders`,
-      deletedCount: result.deletedCount,
+      message: "Order cancelled successfully",
+      orderId,
     });
-  } catch (error) {
-    console.error("[DELETE ORDERS ERROR]", error);
-    res.status(500).json({
+  } catch (err) {
+    console.error("[CANCEL ORDER ERROR]", err);
+    return res.status(500).json({
       success: false,
-      message: "Failed to delete orders",
-      error: error instanceof Error ? error.message : String(error),
+      message: "Failed to cancel order",
+    });
+  }
+});
+
+// DELETE /api/orders/:orderId
+router.delete("/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // Find the order first
+    const order = await OrderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if order is pending
+    if (order.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending orders can be cancelled",
+      });
+    }
+
+    // Delete the order
+    await OrderModel.findByIdAndDelete(orderId);
+
+    console.log(`[CANCEL ORDER] Order ID: ${orderId} cancelled by customer`);
+
+    return res.json({
+      success: true,
+      message: "Order cancelled successfully",
+      orderId,
+    });
+  } catch (err) {
+    console.error("[CANCEL ORDER ERROR]", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel order",
     });
   }
 });

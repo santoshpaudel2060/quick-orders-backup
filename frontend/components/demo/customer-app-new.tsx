@@ -102,6 +102,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
   // Order tracking states
   const [myOrders, setMyOrders] = useState<Order[]>([]);
+  const [order, setOrder] = useState<Order[]>([]);
   const [orderRefreshInterval, setOrderRefreshInterval] =
     useState<NodeJS.Timeout | null>(null);
 
@@ -461,6 +462,28 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     } catch (error) {
       console.error("Failed to generate payment QR:", error);
       alert("Failed to generate payment. Please try again.");
+    }
+  };
+
+  const cancelOrder = async (orderId, status) => {
+    if (status !== "pending") {
+      toast.error("Only pending orders can be cancelled");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+
+    const originalOrders = [...order];
+    try {
+      // Optimistic UI update
+      setOrder(order.filter((o) => o._id !== orderId));
+
+      await axios.delete(`${apiURL}/api/orders/${orderId}`);
+
+      toast.success("Order cancelled successfully");
+    } catch (err) {
+      setOrder(originalOrders);
+      toast.error("Failed to cancel order");
     }
   };
 
@@ -1117,6 +1140,26 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
                 >
                   ➕ Order More
                 </button>
+
+                {myOrders.map((o) =>
+                  o.status === "pending" ? (
+                    <button
+                      key={o._id}
+                      onClick={() => cancelOrder(o._id, o.status)}
+                      className="bg-red-500 hover:bg-red-600 text-white font-black py-2 px-4 rounded-xl transition-all shadow-lg"
+                    >
+                      ❌ Cancel Order
+                    </button>
+                  ) : (
+                    <button
+                      key={o._id}
+                      disabled
+                      className="bg-gray-400 text-white font-black py-2 px-4 rounded-xl cursor-not-allowed"
+                    >
+                      ❌ Cancel Order
+                    </button>
+                  ),
+                )}
 
                 {allOrdersServed && (
                   <>
