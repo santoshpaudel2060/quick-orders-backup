@@ -657,7 +657,7 @@ interface EsewaEnvConfig {
   merchantCode: string;
   secretKey: string;
 }
-
+const BackendUrl = process.env.BACKEND_URL;
 const ESEWA_CONFIG: {
   demo: EsewaEnvConfig;
   production: EsewaEnvConfig;
@@ -825,8 +825,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       product_service_charge: "0",
       product_delivery_charge: "0",
 
-      success_url: process.env.ESEWA_SUCCESS_URL,
-      failure_url: process.env.ESEWA_FAILURE_URL,
+      success_url: `${BackendUrl}/api/payment/success`,
+      failure_url: `${BackendUrl}/api/payment/failure`,
 
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,
