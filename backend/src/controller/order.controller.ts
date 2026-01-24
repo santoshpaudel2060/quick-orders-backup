@@ -27,10 +27,9 @@ export const addOrder = async (req: Request, res: Response) => {
     table.orders.push({ items, createdAt: new Date() });
     await table.save();
 
-    // Create order document for tracking
     const totalAmount = items.reduce(
       (sum: number, item: any) => sum + item.price * item.qty,
-      0
+      0,
     );
     const order = new Order({
       tableNumber,
@@ -41,7 +40,6 @@ export const addOrder = async (req: Request, res: Response) => {
     });
     await order.save();
 
-    // 🔥 Emit WebSocket event for new order
     const io = req.app.get("io");
     io.emit("new-order", order);
 
@@ -52,7 +50,6 @@ export const addOrder = async (req: Request, res: Response) => {
   }
 };
 
-// Get total bill
 export const getBill = async (req: Request, res: Response) => {
   try {
     const { tableNumber, customerId } = req.body;
@@ -80,8 +77,6 @@ export const getBill = async (req: Request, res: Response) => {
   }
 };
 
-// Free table (manual checkout)
-
 export const freeTable = async (req: Request, res: Response) => {
   try {
     const { tableNumber } = req.body;
@@ -99,7 +94,6 @@ export const freeTable = async (req: Request, res: Response) => {
 
     await table.save();
 
-    // 🔥 Emit WebSocket event that table is freed
     const io = req.app.get("io");
     io.emit("table-freed", tableNumber);
 
@@ -112,7 +106,6 @@ export const freeTable = async (req: Request, res: Response) => {
   }
 };
 
-// Get all orders for a table
 export const getTableOrders = async (req: Request, res: Response) => {
   try {
     const { tableNumber } = req.params;
@@ -126,13 +119,11 @@ export const getTableOrders = async (req: Request, res: Response) => {
   }
 };
 
-// FIXED: Get all active orders (for kitchen & admin)
-// Changed "cooking" to "preparing" to match frontend
 export const getAllOrders = async (req: Request, res: Response) => {
   try {
     const orders = await Order.find({
-      status: { $in: ["pending", "preparing", "ready"] }, // FIXED: Changed "cooking" to "preparing"
-    }).sort({ createdAt: 1 }); // Ascending order - oldest first
+      status: { $in: ["pending", "preparing", "ready"] },
+    }).sort({ createdAt: 1 });
 
     console.log(`Found ${orders.length} active orders`);
     res.json(orders);
@@ -142,13 +133,11 @@ export const getAllOrders = async (req: Request, res: Response) => {
   }
 };
 
-// FIXED: Update order status
 export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // Get ID from URL params
-    const { status } = req.body; // Get status from body
+    const { id } = req.params;
+    const { status } = req.body;
 
-    // FIXED: Changed "cooking" to "preparing"
     const validStatuses = ["pending", "preparing", "ready", "served", "paid"];
 
     if (!validStatuses.includes(status)) {
@@ -162,7 +151,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
         completedAt:
           status === "served" || status === "paid" ? new Date() : undefined,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!order) {
@@ -171,11 +160,9 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     console.log(`Order ${id} status updated to ${status}`);
 
-    // 🔥 Emit WebSocket event for status update
     const io = req.app.get("io");
     io.emit("order-status-updated", order);
 
-    // If order is served, mark table as ready for next customer
     if (status === "served") {
       await Table.updateOne(
         { tableNumber: order.tableNumber },
@@ -185,9 +172,8 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
           orders: [],
           sessionStart: null,
           lastActive: null,
-        }
+        },
       );
-      // 🔥 Emit table freed event
       io.emit("table-freed", order.tableNumber);
       console.log(`Table ${order.tableNumber} freed after order served`);
     }
@@ -199,7 +185,6 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
-// Delete/Complete order
 export const deleteOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -212,7 +197,6 @@ export const deleteOrder = async (req: Request, res: Response) => {
 
     console.log(`Order ${id} deleted`);
 
-    // Free up the table
     await Table.updateOne(
       { tableNumber: order.tableNumber },
       {
@@ -221,10 +205,9 @@ export const deleteOrder = async (req: Request, res: Response) => {
         orders: [],
         sessionStart: null,
         lastActive: null,
-      }
+      },
     );
 
-    // 🔥 Emit table freed event
     const io = req.app.get("io");
     io.emit("table-freed", order.tableNumber);
 
@@ -237,7 +220,6 @@ export const deleteOrder = async (req: Request, res: Response) => {
   }
 };
 
-// Generate QR code for payment
 export const generatePaymentQR = async (req: Request, res: Response) => {
   try {
     const { tableNumber, total, customerId } = req.body;
@@ -248,7 +230,6 @@ export const generatePaymentQR = async (req: Request, res: Response) => {
         .json({ message: "Table number and total are required" });
     }
 
-    // Create payment data
     const paymentData = {
       tableNumber,
       total,
@@ -259,7 +240,6 @@ export const generatePaymentQR = async (req: Request, res: Response) => {
       }/payment?table=${tableNumber}&total=${total}`,
     };
 
-    // Generate QR code
     const qrCode = await QRCode.toDataURL(JSON.stringify(paymentData));
 
     res.json({

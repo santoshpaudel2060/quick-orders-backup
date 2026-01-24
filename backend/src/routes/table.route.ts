@@ -24,48 +24,6 @@ router.get("/:tableNumber", getTableByNumber);
 
 router.delete("/:tableNumber", deleteTable);
 
-// ============================================
-// ALTERNATIVE ROUTE 3: Free table by table number only (simpler)
-// ============================================
-// router.post("/free/:tableNumber", async (req, res) => {
-//   try {
-//     const tableNumber = parseInt(req.params.tableNumber);
-
-//     console.log(`[FREE TABLE ALT] Freeing table ${tableNumber}`);
-
-//     const table = await TableModel.findOne({ tableNumber: tableNumber });
-
-//     if (!table) {
-//       return res.status(404).json({
-//         success: false,
-//         message: `Table ${tableNumber} not found`,
-//       });
-//     }
-
-//     table.status = "available";
-//     table.currentCustomer = null;
-//     table.orders = [];
-//     await table.save();
-
-//     console.log(`[FREE TABLE ALT] Table ${tableNumber} freed successfully`);
-
-//     res.json({
-//       success: true,
-//       message: `Table ${tableNumber} freed successfully`,
-//       table: table,
-//     });
-//   } catch (error) {
-//     console.error("[FREE TABLE ALT ERROR]", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to free table",
-//       error: error instanceof Error ? error.message : String(error),
-//     });
-//   }
-// });
-
-// Free table using transaction_uuid (recommended & secure)
-
 // POST /api/tables/free-by-uuid
 
 router.post("/free-by-uuid", async (req, res) => {
@@ -106,7 +64,7 @@ router.post("/free-by-uuid", async (req, res) => {
         sessionStart: null,
         lastActive: null,
       },
-      { new: true }
+      { new: true },
     );
 
     res.json({
@@ -191,7 +149,7 @@ router.post("/free/:tableNumber", async (req, res) => {
         sessionStart: null,
         lastActive: null,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!table) {
@@ -247,7 +205,10 @@ router.post("/occupy", async (req, res) => {
     console.error("Error occupying table:", error);
     res
       .status(500)
-      .json({ message: "Failed to occupy table", error: error instanceof Error ? error.message : String(error) });
+      .json({
+        message: "Failed to occupy table",
+        error: error instanceof Error ? error.message : String(error),
+      });
   }
 });
 
