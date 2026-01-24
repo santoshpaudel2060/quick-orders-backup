@@ -825,8 +825,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       product_service_charge: "0",
       product_delivery_charge: "0",
 
-      success_url: `/api/payments/success`,
-      failure_url: `/api/payments/failure`,
+      success_url: `${process.env.BACKEND_URL}/api/payments/success`,
+      failure_url: `${process.env.BACKEND_URL}/api/payments/failure`,
 
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,

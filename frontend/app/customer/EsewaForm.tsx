@@ -102,7 +102,7 @@ const EsewaForm: React.FC<EsewaFormProps> = ({
       );
 
       setFormData(res.data.formData);
-
+      console.log("eSewa form data:", res.data.formData);
       // STEP 4: Submit form
       setTimeout(() => {
         const form = document.getElementById(
