@@ -929,13 +929,13 @@ router.get("/success", async (req: Request, res: Response) => {
     // Redirect to frontend
     const frontendUrl =
       status === "completed"
-        ? `${frontend_url}/payment-success?data=${data}`
-        : `${frontend_url}/payment-failure`;
+        ? `${process.env.FRONTEND_URL}/payment-success?data=${data}`
+        : `${process.env.FRONTEND_URL}/payment-failure`;
 
     res.redirect(frontendUrl);
   } catch (error: any) {
     console.error("Success route error:", error);
-    res.redirect(`${frontend_url}/payment-failure`);
+    res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
   }
 });
 
