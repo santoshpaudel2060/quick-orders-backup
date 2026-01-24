@@ -658,6 +658,10 @@ interface EsewaEnvConfig {
   secretKey: string;
 }
 
+const success_url = process.env.ESEWA_SUCCESS_URL;
+const failure_url = process.env.ESEWA_FAILURE_URL;
+const frontend_url = process.env.FRONTEND_URL;
+
 const ESEWA_CONFIG: {
   demo: EsewaEnvConfig;
   production: EsewaEnvConfig;
@@ -825,8 +829,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       product_service_charge: "0",
       product_delivery_charge: "0",
 
-      success_url: "http://localhost:5000/api/payments/success",
-      failure_url: "http://localhost:5000/api/payments/failure",
+      success_url: success_url,
+      failure_url: failure_url,
 
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,
@@ -858,7 +862,7 @@ router.get("/success", async (req: Request, res: Response) => {
     const { data } = req.query as { data?: string };
     if (!data) {
       console.log("Success: No data received");
-      return res.redirect("http://localhost:3000/payment-failure");
+      return res.redirect(`${frontend_url}/payment-failure`);
     }
 
     const decodedData = JSON.parse(
@@ -889,7 +893,7 @@ router.get("/success", async (req: Request, res: Response) => {
 
     if (decodedData.signature !== expectedSignature) {
       console.log("❌ Invalid signature - rejecting");
-      return res.redirect("http://localhost:3000/payment-failure");
+      return res.redirect(`${frontend_url}/payment-failure`);
     }
     // === END FIX ===
 
@@ -925,13 +929,13 @@ router.get("/success", async (req: Request, res: Response) => {
     // Redirect to frontend
     const frontendUrl =
       status === "completed"
-        ? `http://localhost:3000/payment-success?data=${data}`
-        : "http://localhost:3000/payment-failure";
+        ? `${frontend_url}/payment-success?data=${data}`
+        : `${frontend_url}/payment-failure`;
 
     res.redirect(frontendUrl);
   } catch (error: any) {
     console.error("Success route error:", error);
-    res.redirect("http://localhost:3000/payment-failure");
+    res.redirect(`${frontend_url}/payment-failure`);
   }
 });
 
