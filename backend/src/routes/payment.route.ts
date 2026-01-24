@@ -1,12 +1,17 @@
+zz;
+
 import express, { Request, Response } from "express";
 import crypto from "crypto";
 import axios from "axios";
-import Payment from "../models/Payment.model.js";
+import Payment from "../models/Payment.model.js"; // Your Payment model
 import OrderModel from "../models/Order.model.js";
 import TableModel from "../models/Table.model.js";
 
 const router = express.Router();
 
+/* =========================
+   eSewa Configuration
+========================= */
 interface EsewaEnvConfig {
   paymentUrl: string;
   verificationUrl: string;
@@ -50,6 +55,77 @@ const generateSignature = (
     .digest("base64");
 };
 
+/* =========================
+   POST /api/payment/initiate
+========================= */
+// router.post("/initiate", async (req: Request, res: Response) => {
+//   try {
+//     const { tableNumber, totalAmount, tax = 0, grandTotal } = req.body;
+
+//     if (!tableNumber || !grandTotal) {
+//       console.log("Initiate: Missing required fields", req.body);
+//       res
+//         .status(400)
+//         .json({ success: false, message: "Missing required fields" });
+//       return;
+//     }
+
+//     const transactionUuid = `QO-${tableNumber}-${Date.now()}`;
+//     const signature = generateSignature(
+//       grandTotal.toFixed(2),
+//       transactionUuid,
+//       config.merchantCode
+//     );
+
+//     console.log("Initiate: Creating pending payment in DB", {
+//       transactionUuid,
+//       grandTotal,
+//       tableNumber,
+//     });
+
+//     // Save payment as pending
+//     const payment = await Payment.create({
+//       transactionUuid,
+//       amount: grandTotal,
+//       status: "completed",
+//       tableNumber,
+//       productCode: config.merchantCode,
+//     });
+
+//     console.log("Initiate: Payment saved", payment);
+
+// const paymentData = {
+//   amount: (grandTotal - tax).toFixed(2),
+//   tax_amount: tax.toFixed(2),
+//   total_amount: grandTotal.toFixed(2),
+//   transaction_uuid: transactionUuid,
+//   product_code: config.merchantCode,
+//   product_service_charge: "0",
+//   product_delivery_charge: "0",
+//   success_url: `${
+//     req.headers.origin || "http://localhost:5000"
+//   }/payment-success`,
+//   failure_url: `${
+//     req.headers.origin || "http://localhost:5000"
+//   }/payment-failure`,
+//   signed_field_names: "total_amount,transaction_uuid,product_code",
+//   signature,
+//   tableNumber,
+// };
+
+//     res
+//       .status(200)
+//       .json({ success: true, paymentUrl: config.paymentUrl, paymentData });
+//   } catch (error: any) {
+//     console.error("Initiate: Payment initiation error", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to initiate payment",
+//       error: error.message,
+//     });
+//   }
+// });
+
 router.post("/initiate", async (req: Request, res: Response) => {
   try {
     const { tableNumber, totalAmount, tax = 0, grandTotal } = req.body;
@@ -60,9 +136,10 @@ router.post("/initiate", async (req: Request, res: Response) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
+    // Find the latest unpaid or relevant order for this table
     const order = await OrderModel.findOne({
       tableNumber,
-      status: { $in: ["served", "ready"] },
+      status: { $in: ["served", "ready"] }, // or whatever status means "ready to pay"
     }).sort({ createdAt: -1 });
 
     if (!order) {
@@ -72,11 +149,13 @@ router.post("/initiate", async (req: Request, res: Response) => {
       });
     }
 
+    // Optional: Validate amount matches
     if (Math.abs(order.totalAmount - grandTotal) > 1) {
       console.warn("Amount mismatch", {
         orderTotal: order.totalAmount,
         grandTotal,
       });
+      // You can choose to allow or block
     }
 
     const transactionUuid = `QO-${tableNumber}-${Date.now()}`;
@@ -87,14 +166,15 @@ router.post("/initiate", async (req: Request, res: Response) => {
       config.merchantCode,
     );
 
+    // Create payment with link to order and customer name
     const payment = await Payment.create({
       transactionUuid,
       amount: grandTotal,
-      status: "pending",
+      status: "pending", // ← Should start as pending!
       tableNumber,
       productCode: config.merchantCode,
       orderId: order._id,
-      customerName: order.customerId,
+      customerName: order.customerId, // ← This is the name like "santosh"
     });
 
     const paymentData = {
@@ -106,14 +186,13 @@ router.post("/initiate", async (req: Request, res: Response) => {
       product_service_charge: "0",
       product_delivery_charge: "0",
 
-      success_url: `/api/payment/success`,
-      failure_url: `/api/payment/failure`,
+      success_url: `${BackendUrl}/api/payment/success`,
+      failure_url: `${BackendUrl}/api/payment/failure`,
 
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,
       tableNumber,
     };
-    console.log("Initiate: Payment data prepared", paymentData);
 
     res
       .status(200)
