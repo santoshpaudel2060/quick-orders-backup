@@ -115,8 +115,8 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
             },
           );
 
-          if (response.data.success) {
-            // Session is valid
+          if (response.data.success && response.data.session.isActive) {
+            // Session is valid and still active
             const session = response.data.session;
             setTableNumber(parseInt(storedTable));
             setCustomerId(session.customerName);
@@ -153,7 +153,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
             }
             toast.success("Session restored! Welcome back.");
           } else {
-            // Session is invalid, clear it
+            // Session is invalid or not active (e.g., ended after payment), clear it
             localStorage.removeItem("guestSessionId");
             localStorage.removeItem("guestSession");
             localStorage.removeItem("currentStage");
@@ -162,6 +162,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
           }
         } catch (error) {
           console.error("Failed to validate session:", error);
+          // Clear on any error
           localStorage.removeItem("guestSessionId");
           localStorage.removeItem("guestSession");
           localStorage.removeItem("currentStage");
@@ -745,6 +746,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       localStorage.removeItem("guestSessionId");
       localStorage.removeItem("guestSession");
       localStorage.removeItem("currentStage");
+      localStorage.removeItem("currentTable");
 
       if (orderRefreshInterval) {
         clearInterval(orderRefreshInterval);
@@ -772,6 +774,12 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       setTableNumber(null);
 
       setSessionStartTime(null);
+
+      // Clear localStorage session data
+      localStorage.removeItem("guestSessionId");
+      localStorage.removeItem("guestSession");
+      localStorage.removeItem("currentStage");
+      localStorage.removeItem("currentTable");
 
       if (orderRefreshInterval) {
         clearInterval(orderRefreshInterval);
