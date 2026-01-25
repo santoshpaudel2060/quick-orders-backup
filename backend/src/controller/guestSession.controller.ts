@@ -2,17 +2,12 @@ import { Request, Response } from "express";
 import GuestSession, { IGuestSession } from "../models/GuestSession.model.js";
 import { v4 as uuidv4 } from "uuid";
 
-// Session duration: 2 hours
 const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
 interface GuestSessionRequest extends Request {
   guestSession?: IGuestSession;
 }
 
-/**
- * Create a new guest session when user scans QR code
- * POST /api/guest-session/create
- */
 export const createGuestSession = async (req: Request, res: Response) => {
   try {
     const { tableNumber, customerName } = req.body;
@@ -32,7 +27,7 @@ export const createGuestSession = async (req: Request, res: Response) => {
       sessionId,
       tableNumber,
       customerName,
-      customerId: customerName, // Using name as customer ID for guests
+      customerId: customerName,
       cart: {
         items: [],
         totalAmount: 0,
@@ -67,10 +62,6 @@ export const createGuestSession = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Validate and retrieve guest session
- * GET /api/guest-session/validate/:sessionId
- */
 export const validateGuestSession = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
@@ -120,10 +111,6 @@ export const validateGuestSession = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Get session details
- * GET /api/guest-session/:sessionId
- */
 export const getGuestSession = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
@@ -149,10 +136,6 @@ export const getGuestSession = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Update cart in guest session
- * PUT /api/guest-session/:sessionId/cart
- */
 export const updateSessionCart = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
@@ -194,10 +177,6 @@ export const updateSessionCart = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Clear/End guest session
- * POST /api/guest-session/:sessionId/end
- */
 export const endGuestSession = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
@@ -235,10 +214,6 @@ export const endGuestSession = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Get all active sessions for a table
- * GET /api/guest-session/table/:tableNumber
- */
 export const getTableSessions = async (req: Request, res: Response) => {
   try {
     const { tableNumber } = req.params;

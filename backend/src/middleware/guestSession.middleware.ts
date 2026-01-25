@@ -6,20 +6,12 @@ interface GuestSessionRequest extends Request {
   sessionId?: string;
 }
 
-/**
- * Middleware to validate guest session
- * Can be used on protected routes that require a guest session
- */
 export const validateGuestSessionMiddleware = async (
   req: GuestSessionRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    // Get session ID from:
-    // 1. Cookie (if available)
-    // 2. Headers
-    // 3. Query params
     const sessionId =
       req.cookies?.guestSessionId ||
       req.headers["x-guest-session-id"] ||
@@ -69,10 +61,6 @@ export const validateGuestSessionMiddleware = async (
   }
 };
 
-/**
- * Optional guest session middleware
- * Does not fail if session is missing, but attaches it if found
- */
 export const optionalGuestSession = async (
   req: GuestSessionRequest,
   res: Response,

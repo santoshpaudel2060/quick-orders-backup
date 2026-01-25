@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 export const protect = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   let token;
 
@@ -27,24 +27,21 @@ export const protect = async (
   }
 
   try {
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
       id: string;
     };
 
-    // Find user
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    // Attach user to request
     req.user = {
       id: user._id.toString(),
       role: user.role,
     };
 
-    next(); // Continue to the route
+    next();
   } catch (error) {
     console.error("Token verification failed:", error);
     return res
@@ -53,11 +50,10 @@ export const protect = async (
   }
 };
 
-// Optional: Admin-only middleware
 export const adminOnly = (
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   if (req.user && req.user.role === "admin") {
     return next();

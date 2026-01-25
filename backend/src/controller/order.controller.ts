@@ -3,7 +3,6 @@ import Order from "../models/Order.model.js";
 import { Request, Response } from "express";
 import QRCode from "qrcode";
 
-// Add order for table (guest or user)
 export const addOrder = async (req: Request, res: Response) => {
   try {
     const { tableNumber, customerId, items, sessionId } = req.body;
@@ -217,8 +216,8 @@ export const deleteOrder = async (req: Request, res: Response) => {
     );
 
     const io = req.app.get("io");
-    io.emit("order:deleted", { orderId: order._id }); // kitchen removes order
-    io.emit("table-freed", order.tableNumber); // frontend updates table
+    io.emit("order:deleted", { orderId: order._id });
+    io.emit("table-freed", order.tableNumber);
 
     console.log(`Table ${order.tableNumber} freed after order deletion`);
 
@@ -266,9 +265,6 @@ export const cancelOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params; // order _id
 
-    // Optional: if you send customerId in body or from auth
-    // const { customerId } = req.body;  // or req.user?.id if you have auth
-
     const order = await Order.findById(id);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -282,32 +278,19 @@ export const cancelOrder = async (req: Request, res: Response) => {
       });
     }
 
-    // Optional safety: verify it's the same customer (uncomment if you pass customerId)
-    // if (order.customerId !== customerId) {
-    //   return res.status(403).json({ message: "You can only cancel your own orders" });
-    // }
-
     // Soft cancel — keep record for analytics/history
     order.status = "canceled";
-    order.canceledAt = new Date(); // assuming you add this field to schema
+    order.canceledAt = new Date();
     await order.save();
 
     const io = req.app.get("io");
 
-    // Notify kitchen → remove/hide this order immediately
     io.emit("order:canceled", {
       orderId: order._id.toString(),
       tableNumber: order.tableNumber,
       status: "canceled",
     });
 
-    // Optional: notify only this table's customers (better than broadcast to everyone)
-    // io.to(`table-${order.tableNumber}`).emit("your_order_canceled", {
-    //   orderId: order._id.toString(),
-    //   message: "Your order has been canceled",
-    // });
-
-    // Optional: if no more active orders → free table (many systems do this)
     const activeOrders = await Order.countDocuments({
       tableNumber: order.tableNumber,
       status: { $nin: ["canceled", "paid", "served"] },

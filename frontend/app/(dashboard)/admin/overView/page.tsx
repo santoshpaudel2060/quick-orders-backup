@@ -1,4 +1,4 @@
-"use client"; // if using hooks like useState/useEffect
+"use client";
 
 import React from "react";
 

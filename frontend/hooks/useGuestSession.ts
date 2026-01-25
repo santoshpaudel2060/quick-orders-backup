@@ -39,9 +39,8 @@ export const useGuestSession = (): UseGuestSessionReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSessionValid, setIsSessionValid] = useState(false);
 
-  /**
-   * Create a new guest session after QR scan
-   */
+  // Create a new guest session after QR scan
+
   const createSession = useCallback(
     async (tableNumber: number, customerName: string): Promise<boolean> => {
       try {
