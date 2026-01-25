@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import jsQR from "jsqr";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useGuestSession } from "../../hooks/useGuestSession";
 
 interface MenuItem {
   _id: string;
@@ -70,6 +71,17 @@ interface EsewaPaymentData {
 const apiURL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CustomerApp({ onBack }: { onBack?: () => void }) {
+  // Guest session management
+  const {
+    sessionId: guestSessionId,
+    session: guestSession,
+    createSession: createGuestSession,
+    restoreSession: restoreGuestSession,
+    updateCartInSession: updateSessionCart,
+    endSession: endGuestSession,
+    refreshSession: refreshGuestSession,
+  } = useGuestSession();
+
   // Stage management
   const [stage, setStage] = useState<
     | "qr-scan"
@@ -96,8 +108,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   const [paymentQR, setPaymentQR] = useState<PaymentQRData | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Session tracking - CRITICAL for preventing old orders from showing
-  const [sessionId, setSessionId] = useState<string>("");
+  // Session tracking
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
 
   // Order tracking states
@@ -246,10 +257,8 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
         }
 
         setTableNumber(tableNum);
-        const newSessionId = `${tableNum}-${Date.now()}`;
-        setSessionId(newSessionId);
         setSessionStartTime(new Date());
-        console.log("New session started:", newSessionId);
+        console.log("QR scanned for table:", tableNum);
 
         // Move to name entry stage
         setStage("name-entry");
@@ -359,6 +368,14 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       return;
     }
 
+    // Create guest session in backend
+    const sessionCreated = await createGuestSession(tableNumber, customerId);
+
+    if (!sessionCreated) {
+      toast.error("Failed to create session");
+      return;
+    }
+
     // Occupy the table
     const success = await occupyTable(tableNumber, customerId);
 
@@ -367,6 +384,8 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
         `Welcome ${customerId}! Table ${tableNumber} is now yours.`,
       );
       setStage("menu");
+    } else {
+      toast.error("Failed to occupy table");
     }
   };
 
@@ -425,15 +444,29 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     }
 
     try {
-      await axios.post(`${apiURL}/api/orders/add`, {
-        tableNumber: tableNumber,
-        customerId,
-        items: cart.map((item) => ({
-          name: item.name,
-          qty: item.quantity,
-          price: item.price,
-        })),
-      });
+      // Save cart to guest session
+      const cartTotal = calculateTotal();
+      await updateSessionCart(cart, cartTotal);
+
+      await axios.post(
+        `${apiURL}/api/orders/add`,
+        {
+          tableNumber: tableNumber,
+          customerId,
+          items: cart.map((item) => ({
+            name: item.name,
+            qty: item.quantity,
+            price: item.price,
+          })),
+          sessionId: guestSessionId, // Include session ID
+        },
+        {
+          withCredentials: true,
+          headers: {
+            "X-Guest-Session-Id": guestSessionId || "",
+          },
+        },
+      );
 
       setCart([]);
       setStage("order-tracking");
@@ -564,6 +597,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       const currentTableNumber = tableNumber;
       const currentCustomerId = customerId;
 
+      // End guest session
+      if (guestSessionId) {
+        await endGuestSession();
+      }
+
       setCart([]);
       setCustomerId("");
       setPaymentQR(null);
@@ -574,7 +612,6 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       setMenuItems([]);
       setTableNumber(null);
 
-      setSessionId("");
       setSessionStartTime(null);
 
       if (orderRefreshInterval) {
@@ -587,6 +624,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     } catch (error) {
       console.error("Failed to complete payment process:", error);
 
+      // End guest session even on error
+      if (guestSessionId) {
+        await endGuestSession();
+      }
+
       setCart([]);
       setCustomerId("");
       setPaymentQR(null);
@@ -597,7 +639,6 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       setMenuItems([]);
       setTableNumber(null);
 
-      setSessionId("");
       setSessionStartTime(null);
 
       if (orderRefreshInterval) {

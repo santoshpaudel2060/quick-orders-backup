@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 // Add order for table (guest or user)
 export const addOrder = async (req: Request, res: Response) => {
   try {
-    const { tableNumber, customerId, items } = req.body;
+    const { tableNumber, customerId, items, sessionId } = req.body;
 
     const table = await Table.findOne({ tableNumber });
     if (!table) return res.status(404).json({ message: "Table not found" });
@@ -34,6 +34,7 @@ export const addOrder = async (req: Request, res: Response) => {
     const order = new Order({
       tableNumber,
       customerId,
+      sessionId, // Store session ID
       items,
       status: "pending",
       totalAmount,

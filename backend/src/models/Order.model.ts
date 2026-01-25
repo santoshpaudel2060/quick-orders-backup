@@ -17,6 +17,7 @@ interface IOrderItem {
 interface IOrder extends Document {
   tableNumber: number;
   customerId: string;
+  sessionId?: string; // Guest session ID for session tracking
   items: IOrderItem[];
   status: OrderStatus;
   totalAmount: number;
@@ -31,6 +32,7 @@ const orderSchema = new Schema<IOrder>(
   {
     tableNumber: { type: Number, required: true, index: true },
     customerId: { type: String, required: true },
+    sessionId: { type: String, index: true }, // Track guest session
     items: [
       {
         name: String,

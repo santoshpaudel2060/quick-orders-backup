@@ -30,6 +30,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { connectDB } from "./config/db.js";
@@ -38,6 +39,7 @@ import tableRoutes from "./routes/table.route.js";
 import orderRoutes from "./routes/order.route.js";
 import menuRoutes from "./routes/menu.route.js";
 import paymentRoutes from "./routes/payment.route.js";
+import guestSessionRoutes from "./routes/guestSession.route.js";
 
 dotenv.config();
 connectDB();
@@ -45,12 +47,14 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tables", tableRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/menus", menuRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/guest-session", guestSessionRoutes);
 
 const PORT = process.env.PORT || 5000;
 
