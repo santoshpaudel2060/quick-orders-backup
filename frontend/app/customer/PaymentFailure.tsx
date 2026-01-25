@@ -12,6 +12,9 @@ export default function PaymentFailure() {
     localStorage.removeItem("currentStage");
     localStorage.removeItem("currentTable");
 
+    // Mark session as ended so hook doesn't try to restore
+    localStorage.setItem("sessionEnded", "true");
+
     router.push("/");
   };
 
@@ -109,6 +112,7 @@ export default function PaymentFailure() {
                 localStorage.removeItem("guestSession");
                 localStorage.removeItem("currentStage");
                 localStorage.removeItem("currentTable");
+                localStorage.setItem("sessionEnded", "true");
                 router.push("/");
               }}
               className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-black py-3 rounded-xl transition-all"

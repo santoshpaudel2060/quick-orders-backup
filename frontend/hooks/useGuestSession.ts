@@ -245,6 +245,14 @@ export const useGuestSession = (): UseGuestSessionReturn => {
    */
   useEffect(() => {
     const restoreStoredSession = async () => {
+      // Check if session was explicitly ended
+      const sessionEnded = localStorage.getItem("sessionEnded");
+      if (sessionEnded) {
+        // Session was explicitly ended, don't restore
+        localStorage.removeItem("sessionEnded");
+        return;
+      }
+
       const storedSessionId =
         localStorage.getItem("guestSessionId") || sessionId;
 
