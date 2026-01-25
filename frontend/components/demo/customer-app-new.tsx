@@ -93,6 +93,22 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     | "payment"
   >("qr-scan");
 
+  // Check if guest session exists on mount and restore
+  useEffect(() => {
+    if (guestSessionId && guestSession) {
+      // Session was restored from localStorage
+      setTableNumber(guestSession.tableNumber);
+      setCustomerId(guestSession.customerName);
+      setSessionStartTime(new Date(guestSession.sessionStartTime));
+      if (guestSession.cart && guestSession.cart.items.length > 0) {
+        setCart(guestSession.cart.items);
+      }
+      // Skip to menu stage since session is already active
+      setStage("menu");
+      toast.success("Session restored! Welcome back.");
+    }
+  }, [guestSessionId, guestSession]);
+
   // QR Scanning states
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
