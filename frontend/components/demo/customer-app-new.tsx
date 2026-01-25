@@ -95,45 +95,87 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
   // Check if guest session exists on mount and restore
   useEffect(() => {
-    if (guestSessionId && guestSession) {
-      // Session was restored from localStorage
-      setTableNumber(guestSession.tableNumber);
-      setCustomerId(guestSession.customerName);
-      setSessionStartTime(new Date(guestSession.sessionStartTime));
-      if (guestSession.cart && guestSession.cart.items.length > 0) {
-        setCart(guestSession.cart.items);
-      }
+    const restoreSession = async () => {
+      // Check if there's a stored session
+      const storedSessionId = localStorage.getItem("guestSessionId");
+      const storedTable = localStorage.getItem("currentTable");
+      const storedStage = localStorage.getItem("currentStage");
 
-      // Restore the previous stage from localStorage
-      const savedStage = localStorage.getItem("currentStage");
-      if (
-        savedStage &&
-        [
-          "qr-scan",
-          "name-entry",
-          "menu",
-          "cart",
-          "order-tracking",
-          "bill",
-          "payment",
-        ].includes(savedStage)
-      ) {
-        setStage(
-          savedStage as
-            | "qr-scan"
-            | "name-entry"
-            | "menu"
-            | "cart"
-            | "order-tracking"
-            | "bill"
-            | "payment",
-        );
-      } else {
-        setStage("menu");
+      if (storedSessionId && storedTable) {
+        // Session exists in localStorage
+        try {
+          // Validate session with backend
+          const response = await axios.get(
+            `${apiURL}/api/guest-session/validate/${storedSessionId}`,
+            {
+              withCredentials: true,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          );
+
+          if (response.data.success) {
+            // Session is valid
+            const session = response.data.session;
+            setTableNumber(parseInt(storedTable));
+            setCustomerId(session.customerName);
+            setSessionStartTime(new Date(session.sessionStartTime));
+            if (session.cart && session.cart.items.length > 0) {
+              setCart(session.cart.items);
+            }
+
+            // Restore the previous stage
+            if (
+              storedStage &&
+              [
+                "qr-scan",
+                "name-entry",
+                "menu",
+                "cart",
+                "order-tracking",
+                "bill",
+                "payment",
+              ].includes(storedStage)
+            ) {
+              setStage(
+                storedStage as
+                  | "qr-scan"
+                  | "name-entry"
+                  | "menu"
+                  | "cart"
+                  | "order-tracking"
+                  | "bill"
+                  | "payment",
+              );
+            } else {
+              setStage("menu");
+            }
+            toast.success("Session restored! Welcome back.");
+          } else {
+            // Session is invalid, clear it
+            localStorage.removeItem("guestSessionId");
+            localStorage.removeItem("guestSession");
+            localStorage.removeItem("currentStage");
+            localStorage.removeItem("currentTable");
+            setStage("qr-scan");
+          }
+        } catch (error) {
+          console.error("Failed to validate session:", error);
+          localStorage.removeItem("guestSessionId");
+          localStorage.removeItem("guestSession");
+          localStorage.removeItem("currentStage");
+          localStorage.removeItem("currentTable");
+          setStage("qr-scan");
+        }
       }
-      toast.success("Session restored! Welcome back.");
+    };
+
+    // Only restore on mount, not on every dependency change
+    if (!guestSessionId) {
+      restoreSession();
     }
-  }, [guestSessionId, guestSession]);
+  }, []);
 
   // QR Scanning states
   const [tableNumber, setTableNumber] = useState<number | null>(null);
@@ -169,6 +211,15 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     localStorage.setItem("currentStage", stage);
   }, [stage]);
+
+  // Save table number to localStorage whenever it changes
+  useEffect(() => {
+    if (tableNumber !== null) {
+      localStorage.setItem("currentTable", tableNumber.toString());
+    } else {
+      localStorage.removeItem("currentTable");
+    }
+  }, [tableNumber]);
 
   // Fetch tables from backend for validation
   const {
@@ -285,7 +336,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   }, [stage, tableNumber, customerId, sessionStartTime]);
 
   // Handle QR scan detection
-  const handleQRDetected = (qrData: string) => {
+  const handleQRDetected = async (qrData: string) => {
     console.log("QR Detected:", qrData);
 
     try {
@@ -294,6 +345,34 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
       if (tableParam) {
         const tableNum = parseInt(tableParam);
+
+        // Check if this is a different table than current session
+        if (tableNumber !== null && tableNumber !== tableNum) {
+          // Different table scanned - end old session and start new one
+          console.log(
+            `Switching from table ${tableNumber} to table ${tableNum}`,
+          );
+
+          // End the old guest session
+          if (guestSessionId) {
+            await endGuestSession();
+          }
+
+          // Clear all session data from localStorage
+          localStorage.removeItem("guestSessionId");
+          localStorage.removeItem("guestSession");
+          localStorage.removeItem("currentStage");
+          localStorage.removeItem("currentTable");
+
+          // Clear component state
+          setCart([]);
+          setCustomerId("");
+          setMyOrders([]);
+          setPaymentQR(null);
+          setEsewaPaymentData(null);
+          setSelectedCategory("all");
+          setSearchTerm("");
+        }
 
         // Validate table exists and is available
         const validation = validateTable(tableNum);
