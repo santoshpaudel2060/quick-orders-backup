@@ -1,6 +1,7 @@
 # Quick Orders - Folder Structure Documentation
 
 ## Project Overview
+
 This document describes the improved folder structure for the Quick Orders application, organized for better maintainability and scalability.
 
 ---
@@ -59,6 +60,7 @@ backend/
 ```
 
 ### Backend Structure Benefits:
+
 - **config/** - Centralized configuration management
 - **models/** - Single source of truth for data schemas
 - **controllers/** - Clean separation of business logic
@@ -153,6 +155,7 @@ frontend/
 ```
 
 ### Frontend Structure Benefits:
+
 - **(auth)** - Route group for authentication pages (hidden from URL structure)
 - **(dashboard)** - Route group for dashboard pages (hidden from URL structure)
 - **components/** - Well-organized by type/purpose
@@ -166,36 +169,39 @@ frontend/
 ## Key Features
 
 ### Backend
-| Folder | Purpose | Files |
-|--------|---------|-------|
-| config | App configuration | Cloudinary, DB connections |
-| models | Data schemas | MongoDB models via Mongoose |
-| controllers | Business logic | Request handlers for each feature |
-| routes | API endpoints | Route definitions |
-| middleware | Custom middleware | Auth, uploads, session management |
-| utils | Helper functions | Utility functions and helpers |
-| types | Type definitions | TypeScript types |
+
+| Folder      | Purpose           | Files                             |
+| ----------- | ----------------- | --------------------------------- |
+| config      | App configuration | Cloudinary, DB connections        |
+| models      | Data schemas      | MongoDB models via Mongoose       |
+| controllers | Business logic    | Request handlers for each feature |
+| routes      | API endpoints     | Route definitions                 |
+| middleware  | Custom middleware | Auth, uploads, session management |
+| utils       | Helper functions  | Utility functions and helpers     |
+| types       | Type definitions  | TypeScript types                  |
 
 ### Frontend
-| Folder | Purpose | Examples |
-|--------|---------|----------|
-| (auth) | Authentication flows | Login, Sign up pages |
-| (dashboard) | Admin/Kitchen interfaces | Admin panel, Kitchen display, Payment success |
-| customer | Guest ordering | Main ordering interface |
-| components/common | Reusable components | Theme provider |
-| components/forms | Form components | eSewa payment forms |
-| components/dashboard | Dashboard components | Admin panel, Customer app, Kitchen display |
-| components/payment | Payment UIs | Success/Failure pages |
-| hooks | Custom React hooks | Session management, State logic |
-| lib | Utilities | API calls, Helper functions |
-| types | Type definitions | TypeScript interfaces |
-| styles | Global styles | CSS, Tailwind config |
+
+| Folder               | Purpose                  | Examples                                      |
+| -------------------- | ------------------------ | --------------------------------------------- |
+| (auth)               | Authentication flows     | Login, Sign up pages                          |
+| (dashboard)          | Admin/Kitchen interfaces | Admin panel, Kitchen display, Payment success |
+| customer             | Guest ordering           | Main ordering interface                       |
+| components/common    | Reusable components      | Theme provider                                |
+| components/forms     | Form components          | eSewa payment forms                           |
+| components/dashboard | Dashboard components     | Admin panel, Customer app, Kitchen display    |
+| components/payment   | Payment UIs              | Success/Failure pages                         |
+| hooks                | Custom React hooks       | Session management, State logic               |
+| lib                  | Utilities                | API calls, Helper functions                   |
+| types                | Type definitions         | TypeScript interfaces                         |
+| styles               | Global styles            | CSS, Tailwind config                          |
 
 ---
 
 ## Directory Navigation
 
 ### Frontend Routes
+
 ```
 / ............................ Home page
 /login ........................ Login page (auth group)
@@ -211,6 +217,7 @@ frontend/
 ```
 
 ### Backend API Routes
+
 ```
 /api/auth ..................... Authentication endpoints
 /api/menus .................... Menu management
@@ -225,26 +232,29 @@ frontend/
 ## Best Practices Implemented
 
 ### Backend
+
 ✅ **Models**: Single responsibility - define schemas only  
 ✅ **Controllers**: Contain business logic and route handlers  
 ✅ **Routes**: Define API endpoints only  
 ✅ **Middleware**: Reusable functions for cross-cutting concerns  
 ✅ **Utils**: Pure functions for common operations  
-✅ **Config**: Environment-specific configuration centralized  
+✅ **Config**: Environment-specific configuration centralized
 
 ### Frontend
+
 ✅ **Route Groups**: Organize related routes with Next.js grouping  
 ✅ **Component Organization**: Grouped by functionality/type  
 ✅ **Hooks**: Extracted custom logic for reusability  
 ✅ **Types**: Centralized TypeScript definitions  
 ✅ **Utilities**: Shared functions in lib/  
-✅ **Separation of Concerns**: Clear boundaries between features  
+✅ **Separation of Concerns**: Clear boundaries between features
 
 ---
 
 ## Migration Notes
 
 All code has been **reorganized without changes**:
+
 - ✅ Files moved to appropriate folders
 - ✅ Import paths updated automatically
 - ✅ No functionality changed
@@ -252,6 +262,7 @@ All code has been **reorganized without changes**:
 - ✅ Backward compatible
 
 ### Files Reorganized
+
 - ✅ 22 frontend files reorganized into proper structure
 - ✅ Backend structure already well-organized
 - ✅ All imports updated for new paths
@@ -262,12 +273,14 @@ All code has been **reorganized without changes**:
 ## Next Steps
 
 ### For Backend Development
+
 1. Add new routes → `src/routes/`
 2. Create models → `src/models/`
 3. Implement logic → `src/controllers/`
 4. Add middleware as needed → `src/middleware/`
 
 ### For Frontend Development
+
 1. Page components → `app/` subdirectories
 2. Shared components → `components/`
 3. Custom hooks → `hooks/`
@@ -281,12 +294,14 @@ All code has been **reorganized without changes**:
 To keep the structure clean:
 
 ### Backend
+
 - Keep models focused on schema definition
 - Put business logic in controllers
 - Extract reusable functions to utils
 - Create new middleware for cross-cutting concerns
 
 ### Frontend
+
 - Group related pages in route groups
 - Keep components organized by type
 - Extract custom logic to hooks
