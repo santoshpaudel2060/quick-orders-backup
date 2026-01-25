@@ -100,7 +100,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
       );
     });
 
-    socket.on("order-cancelled", ({ orderId }: { orderId: string }) => {
+    socket.on("order:canceled", ({ orderId }: { orderId: string }) => {
       setOrders((prev) => prev.filter((o) => o._id !== orderId));
       toast.success(`Order ${orderId} cancelled!`);
     });
@@ -145,6 +145,7 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
   };
 
   // Cancel order
+  // Cancel order
   const cancelOrder = async (orderId: string) => {
     if (!confirm("Cancel this order?")) return;
 
@@ -152,14 +153,16 @@ export default function KitchenDashboard({ onBack }: { onBack?: () => void }) {
     try {
       // Optimistic update
       setOrders(orders.filter((o) => o._id !== orderId));
-      await axios.delete(`${apiURL}/api/orders/${orderId}`);
+
+      // Change from DELETE to POST to match your backend cancelOrder endpoint
+      await axios.post(`${apiURL}/api/orders/${orderId}/cancel`);
+
       toast.success("Order cancelled");
     } catch (err) {
       setOrders(original);
       toast.error("Failed to cancel");
     }
   };
-
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");

@@ -138,7 +138,14 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ["pending", "preparing", "ready", "served", "paid"];
+    const validStatuses = [
+      "pending",
+      "preparing",
+      "ready",
+      "served",
+      "paid",
+      "canceled",
+    ];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status: ${status}` });
@@ -251,5 +258,86 @@ export const generatePaymentQR = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to generate QR code" });
+  }
+};
+
+export const cancelOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // order _id
+
+    // Optional: if you send customerId in body or from auth
+    // const { customerId } = req.body;  // or req.user?.id if you have auth
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Only pending orders can be canceled
+    if (order.status !== "pending") {
+      return res.status(400).json({
+        message:
+          "Cannot cancel order — it has already been accepted or is being prepared",
+      });
+    }
+
+    // Optional safety: verify it's the same customer (uncomment if you pass customerId)
+    // if (order.customerId !== customerId) {
+    //   return res.status(403).json({ message: "You can only cancel your own orders" });
+    // }
+
+    // Soft cancel — keep record for analytics/history
+    order.status = "canceled";
+    order.canceledAt = new Date(); // assuming you add this field to schema
+    await order.save();
+
+    const io = req.app.get("io");
+
+    // Notify kitchen → remove/hide this order immediately
+    io.emit("order:canceled", {
+      orderId: order._id.toString(),
+      tableNumber: order.tableNumber,
+      status: "canceled",
+    });
+
+    // Optional: notify only this table's customers (better than broadcast to everyone)
+    // io.to(`table-${order.tableNumber}`).emit("your_order_canceled", {
+    //   orderId: order._id.toString(),
+    //   message: "Your order has been canceled",
+    // });
+
+    // Optional: if no more active orders → free table (many systems do this)
+    const activeOrders = await Order.countDocuments({
+      tableNumber: order.tableNumber,
+      status: { $nin: ["canceled", "paid", "served"] },
+    });
+
+    if (activeOrders === 0) {
+      await Table.updateOne(
+        { tableNumber: order.tableNumber },
+        {
+          status: "available",
+          currentCustomer: null,
+          sessionStart: null,
+          lastActive: null,
+          // orders: []   ← decide if you want to clear array or keep history
+        },
+      );
+
+      io.emit("table-freed", order.tableNumber);
+      console.log(
+        `Table ${order.tableNumber} auto-freed after last order canceled`,
+      );
+    }
+
+    console.log(`Order ${id} canceled by customer`);
+
+    res.json({
+      message: "Order canceled successfully",
+      order,
+    });
+  } catch (error) {
+    console.error("Cancel order error:", error);
+    res.status(500).json({ message: "Failed to cancel order" });
   }
 };
