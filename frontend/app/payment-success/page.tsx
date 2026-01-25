@@ -1,103 +1,3 @@
-// "use client";
-
-// import { useSearchParams, useRouter } from "next/navigation";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// export default function PaymentSuccess() {
-//   const searchParams = useSearchParams();
-//   const router = useRouter();
-//   const data = searchParams.get("data");
-
-//   const [payment, setPayment] = useState<any>(null);
-//   const [error, setError] = useState("");
-//   const [isExiting, setIsExiting] = useState(false);
-
-//   // Decode payment data
-//   useEffect(() => {
-//     if (!data) {
-//       setError("No payment data received");
-//       return;
-//     }
-
-//     try {
-//       const decoded = JSON.parse(atob(data));
-//       setPayment(decoded);
-//     } catch (err) {
-//       console.error(err);
-//       setError("Failed to decode payment data");
-//     }
-//   }, [data]);
-
-//   // Function to free the table and redirect
-//   const exitTable = async () => {
-//     if (!payment || isExiting) return;
-
-//     setIsExiting(true);
-
-//     try {
-//       await axios.post(`http://localhost:5000/api/tables/free`, {
-//         tableNumber: payment.tableNumber,
-//       });
-//       router.push("/");
-//     } catch (err) {
-//       console.error("Failed to free table:", err);
-//       router.push("/"); // Redirect anyway
-//     }
-//   };
-
-//   // Auto redirect after 10 seconds
-//   useEffect(() => {
-//     if (payment) {
-//       const timer = setTimeout(() => {
-//         exitTable();
-//       }, 10000);
-//       return () => clearTimeout(timer);
-//     }
-//   }, [payment]);
-
-//   if (error) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-red-50">
-//         <h1 className="text-red-600 text-xl font-bold">{error}</h1>
-//       </div>
-//     );
-//   }
-
-//   if (!payment) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-yellow-50">
-//         <h1 className="text-xl font-bold">⏳ Verifying payment...</h1>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-green-50">
-//       <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full">
-//         <h1 className="text-3xl font-black text-green-600 mb-4">
-//           Payment Successful ✅
-//         </h1>
-//         <p className="mb-2 text-slate-700">
-//           <strong>Transaction ID:</strong> {payment.transaction_uuid}
-//         </p>
-//         <p className="mb-6 text-slate-700">
-//           <strong>Amount Paid:</strong> NPR {payment.total_amount}
-//         </p>
-//         <button
-//           onClick={exitTable}
-//           className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all shadow-md"
-//         >
-//           Exit
-//         </button>
-//         <p className="mt-4 text-sm text-slate-500">
-//           You will be redirected to the home page in 10 seconds...
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -192,7 +92,18 @@ export default function PaymentSuccess() {
           Thanks for dining with us.
         </p>
         <button
-          onClick={() => (window.location.href = "/")}
+          onClick={() => {
+            // Clear all guest session data
+            localStorage.removeItem("guestSessionId");
+            localStorage.removeItem("guestSession");
+            localStorage.removeItem("currentStage");
+            localStorage.removeItem("currentTable");
+
+            // Mark session as ended so hook doesn't try to restore
+            localStorage.setItem("sessionEnded", "true");
+
+            window.location.href = "/";
+          }}
           className="px-8 py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition"
         >
           Back to Home
