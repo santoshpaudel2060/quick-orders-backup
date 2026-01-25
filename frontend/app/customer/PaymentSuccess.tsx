@@ -49,6 +49,12 @@ export default function PaymentSuccess() {
   }, [searchParams]);
 
   const handleContinue = () => {
+    // Clear all guest session data
+    localStorage.removeItem("guestSessionId");
+    localStorage.removeItem("guestSession");
+    localStorage.removeItem("currentStage");
+    localStorage.removeItem("currentTable");
+
     router.push("/");
   };
 
@@ -88,7 +94,13 @@ export default function PaymentSuccess() {
                 Try Again
               </button>
               <button
-                onClick={() => router.push("/")}
+                onClick={() => {
+                  localStorage.removeItem("guestSessionId");
+                  localStorage.removeItem("guestSession");
+                  localStorage.removeItem("currentStage");
+                  localStorage.removeItem("currentTable");
+                  router.push("/");
+                }}
                 className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-black py-3 rounded-xl transition-all"
               >
                 Go to Home
