@@ -463,6 +463,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
         {
           withCredentials: true,
           headers: {
+            "Content-Type": "application/json",
             "X-Guest-Session-Id": guestSessionId || "",
           },
         },

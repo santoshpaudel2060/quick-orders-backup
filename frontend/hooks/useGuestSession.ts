@@ -53,7 +53,10 @@ export const useGuestSession = (): UseGuestSessionReturn => {
             customerName,
           },
           {
-            withCredentials: true, // Include cookies
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
           },
         );
 
@@ -96,6 +99,9 @@ export const useGuestSession = (): UseGuestSessionReturn => {
         `${apiURL}/api/guest-session/validate/${id}`,
         {
           withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
       );
 
@@ -138,6 +144,9 @@ export const useGuestSession = (): UseGuestSessionReturn => {
         `${apiURL}/api/guest-session/${sessionId}`,
         {
           withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
       );
 
@@ -177,6 +186,9 @@ export const useGuestSession = (): UseGuestSessionReturn => {
           },
           {
             withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
           },
         );
 
@@ -207,6 +219,9 @@ export const useGuestSession = (): UseGuestSessionReturn => {
         {},
         {
           withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
       );
 
