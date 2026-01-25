@@ -1,6 +1,6 @@
 "use client";
 
-import CustomerApp from "../../components/demo/customer-app-new";
+import CustomerApp from "../../components/dashboard/customer-app-new";
 
 export default function CustomerPage() {
   return <CustomerApp onBack={() => (window.location.href = "/")} />;
