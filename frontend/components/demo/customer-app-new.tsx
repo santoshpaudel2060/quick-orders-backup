@@ -103,8 +103,34 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       if (guestSession.cart && guestSession.cart.items.length > 0) {
         setCart(guestSession.cart.items);
       }
-      // Skip to menu stage since session is already active
-      setStage("menu");
+
+      // Restore the previous stage from localStorage
+      const savedStage = localStorage.getItem("currentStage");
+      if (
+        savedStage &&
+        [
+          "qr-scan",
+          "name-entry",
+          "menu",
+          "cart",
+          "order-tracking",
+          "bill",
+          "payment",
+        ].includes(savedStage)
+      ) {
+        setStage(
+          savedStage as
+            | "qr-scan"
+            | "name-entry"
+            | "menu"
+            | "cart"
+            | "order-tracking"
+            | "bill"
+            | "payment",
+        );
+      } else {
+        setStage("menu");
+      }
       toast.success("Session restored! Welcome back.");
     }
   }, [guestSessionId, guestSession]);
@@ -138,6 +164,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     useState<EsewaPaymentData | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const esewaFormRef = useRef<HTMLFormElement>(null);
+
+  // Save stage to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("currentStage", stage);
+  }, [stage]);
 
   // Fetch tables from backend for validation
   const {
@@ -630,6 +661,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       setTableNumber(null);
 
       setSessionStartTime(null);
+
+      // Clear localStorage session data
+      localStorage.removeItem("guestSessionId");
+      localStorage.removeItem("guestSession");
+      localStorage.removeItem("currentStage");
 
       if (orderRefreshInterval) {
         clearInterval(orderRefreshInterval);
