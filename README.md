@@ -15,6 +15,11 @@ A modern, **mobile-first restaurant ordering system** built with React and Node.
 - See real-time order summary
 - Optional online payment integration (eSewa)
 - Guest session persists using browser storage to prevent data loss on refresh
+- **🎯 NEW: Real-Time Order Tracking with Live Progress Bar**
+  - Watch orders progress from pending → preparing → ready
+  - Automatic status updates based on progress percentage
+  - Live Socket.io updates every 2 seconds
+  - No page refresh required
 
 ### Kitchen Dashboard
 
@@ -69,41 +74,90 @@ A modern, **mobile-first restaurant ordering system** built with React and Node.
 ```bash
 git clone https://github.com/santoshpaudel2060/quick-orders-backup
 cd restaurant-qr-ordering
-Install dependencies:
+```
 
+2. Install dependencies:
+
+```bash
 cd frontend
 npm install
 cd ../backend
 npm install
-Configure environment variables:
+```
 
-Create .env file in backend folder:
+3. Configure environment variables:
 
+Create `.env` file in backend folder:
+
+```
 PORT=5000
 MONGO_URI=<your_mongodb_uri>
 JWT_SECRET=<your_secret_key>
-Start the backend server:
+NODE_ENV=development
+```
 
+4. Start the backend server:
+
+```bash
 cd backend
 npm run dev
-Start the frontend:
+```
 
+5. Start the frontend (in a new terminal):
+
+```bash
 cd frontend
-npm start
-Open browser and navigate to:
+npm run dev
+```
 
+6. Open browser and navigate to:
+
+```
 http://localhost:3000
+```
+
+---
+
+## ⚡ Real-Time Order Tracking (NEW!)
+
+The system now includes **automatic real-time order tracking** with live progress updates.
+
+### How It Works
+
+- When a customer places an order, it automatically starts tracking
+- Progress increases from 0% → 100% automatically (every 2 seconds)
+- Order status updates dynamically:
+  - **0-10%**: Pending ⏳
+  - **10-99%**: Preparing 👨‍🍳
+  - **100%**: Ready ✅
+- Customers can see live updates on the tracking page without refreshing
+- All updates are powered by Socket.io
+
+### Quick Test
+
+1. Place an order at http://localhost:3000/customer
+2. Click "Track Your Order Live 📍" after payment
+3. Watch the progress bar update in real-time!
+
+### Documentation
+
+See [QUICK_START.md](QUICK_START.md) for a 5-minute quick start guide.
+
+See [REALTIME_ORDER_TRACKING.md](REALTIME_ORDER_TRACKING.md) for detailed implementation guide and customization options.
+
+---
+
 🔹 Folder Structure
 restaurant-qr-ordering/
 ├─ backend/
-│  ├─ models/       # MongoDB models (Order, Menu, User/Admin)
-│  ├─ routes/       # API routes
-│  ├─ controllers/  # Route handlers
-│  └─ server.js
+│ ├─ models/ # MongoDB models (Order, Menu, User/Admin)
+│ ├─ routes/ # API routes
+│ ├─ controllers/ # Route handlers
+│ └─ server.js
 ├─ frontend/
-│  ├─ components/   # React components
-│  ├─ pages/        # Pages: Customer, Kitchen, Admin
-│  └─ App.js
+│ ├─ components/ # React components
+│ ├─ pages/ # Pages: Customer, Kitchen, Admin
+│ └─ App.js
 ├─ README.md
 └─ package.json
 💡 How It Works
@@ -143,8 +197,9 @@ Push to the branch: git push origin feature-name
 
 Open a Pull Request
 
-
-
 👤 Author
 Santosh Paudel – GitHub – https://github.com/santoshpaudel2060
+
+```
+
 ```

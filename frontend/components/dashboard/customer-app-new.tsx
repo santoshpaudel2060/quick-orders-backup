@@ -6,6 +6,8 @@ import jsQR from "jsqr";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useGuestSession } from "../../hooks/useGuestSession";
+import { useOrderTracking } from "../../hooks/useOrderTracking";
+import OrderProgressBar from "../OrderProgressBar";
 
 interface MenuItem {
   _id: string;
@@ -202,6 +204,17 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
   const [orderRefreshInterval, setOrderRefreshInterval] =
     useState<NodeJS.Timeout | null>(null);
 
+  // Real-time order progress tracking - per order tracking
+  const {
+    getOrderProgress,
+    subscribeToOrder,
+    orderProgress: hookOrderProgress,
+  } = useOrderTracking();
+  // Map of orderId -> { progress: number, status: string, lastUpdate: number }
+  const [orderProgressMap, setOrderProgressMap] = useState<{
+    [key: string]: { progress: number; status: string; lastUpdateTime: number };
+  }>({});
+
   // eSewa payment states
   const [esewaPaymentData, setEsewaPaymentData] =
     useState<EsewaPaymentData | null>(null);
@@ -335,6 +348,126 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       setOrderRefreshInterval(null);
     }
   }, [stage, tableNumber, customerId, sessionStartTime]);
+
+  // Update progress display for all orders - initialize order progress map
+  useEffect(() => {
+    if (myOrders && myOrders.length > 0) {
+      const newProgressMap = { ...orderProgressMap };
+
+      myOrders.forEach((order) => {
+        const orderId = order._id;
+
+        // Only initialize if not already in map
+        if (!newProgressMap[orderId]) {
+          const existingData = newProgressMap[orderId];
+          const lastUpdateTime = existingData?.lastUpdateTime || Date.now();
+
+          const calculatedProgress = getProgressByStatus(
+            order.status,
+            lastUpdateTime,
+          );
+
+          newProgressMap[orderId] = {
+            progress: calculatedProgress,
+            status: order.status,
+            lastUpdateTime: Date.now(),
+          };
+
+          console.log(
+            `📊 Initialized Order ${orderId.slice(-6)}: ${order.status} → ${calculatedProgress}%`,
+          );
+        }
+      });
+
+      setOrderProgressMap(newProgressMap);
+    }
+  }, [myOrders]);
+
+  // Update progress map when Socket.io data changes
+  useEffect(() => {
+    // This effect watches the hook's orderProgress map and updates local state
+    // The hook handles all Socket.io listening, we just sync the data
+    if (hookOrderProgress && hookOrderProgress.size > 0) {
+      setOrderProgressMap((prev) => {
+        const updated = { ...prev };
+        hookOrderProgress.forEach((progressData, orderId) => {
+          updated[orderId] = {
+            progress: progressData.progress,
+            status: progressData.status,
+            lastUpdateTime: Date.now(),
+          };
+          console.log(
+            `📡 Socket.io synced Order ${orderId.slice(-6)}: ${progressData.status} → ${progressData.progress}%`,
+          );
+        });
+        return updated;
+      });
+    }
+  }, [hookOrderProgress]);
+
+  // Refresh progress display for smooth animation
+  useEffect(() => {
+    const animationInterval = setInterval(() => {
+      setOrderProgressMap((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach((orderId) => {
+          const data = updated[orderId];
+          if (data.status !== "served" && data.progress < 99) {
+            data.progress = getProgressByStatus(
+              data.status,
+              data.lastUpdateTime,
+            );
+          }
+        });
+        return updated;
+      });
+    }, 500); // Update every 500ms for smooth animation
+
+    return () => clearInterval(animationInterval);
+  }, []);
+
+  // Helper function to calculate progress based on status and elapsed time
+  const getProgressByStatus = (
+    status: string,
+    lastUpdateTime: number,
+  ): number => {
+    const now = Date.now();
+    const elapsedSeconds = (now - lastUpdateTime) / 1000;
+
+    switch (status) {
+      case "pending":
+        // Start at 5%, slowly increment towards 10%
+        return Math.min(5 + elapsedSeconds * 0.5, 10);
+
+      case "preparing":
+        // Start at 10%, increment towards 90% over time
+        const preparingProgress = 10 + elapsedSeconds * 0.8;
+        return Math.min(preparingProgress, 90);
+
+      case "ready":
+        // Stay between 90-95%
+        return 95;
+
+      case "served":
+        // Complete
+        return 100;
+
+      default:
+        return 0;
+    }
+  };
+
+  // Subscribe to orders when they're fetched (Socket.io subscription)
+  useEffect(() => {
+    if (myOrders && myOrders.length > 0) {
+      myOrders.forEach((order) => {
+        if (!orderProgressMap[order._id]) {
+          // Only subscribe if not already in progress map
+          subscribeToOrder(order._id);
+        }
+      });
+    }
+  }, [myOrders.length, subscribeToOrder]);
 
   // Handle QR scan detection
   const handleQRDetected = async (qrData: string) => {
@@ -575,7 +708,7 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
       const cartTotal = calculateTotal();
       await updateSessionCart(cart, cartTotal);
 
-      await axios.post(
+      const response = await axios.post(
         `${apiURL}/api/orders/add`,
         {
           tableNumber: tableNumber,
@@ -595,6 +728,11 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
           },
         },
       );
+
+      // Subscribe to the placed order for real-time tracking
+      const placedOrderId = response.data.order._id;
+      console.log("📍 Order placed:", placedOrderId);
+      subscribeToOrder(placedOrderId);
 
       setCart([]);
       setStage("order-tracking");
@@ -1292,6 +1430,50 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
                     </span>
                   </div>
 
+                  {/* Pending Status - No Progress Bar */}
+                  {order.status === "pending" && (
+                    <div className="bg-yellow-50 rounded-xl p-6 mb-6 border-2 border-yellow-300">
+                      <div className="text-center">
+                        <p className="text-yellow-700 font-bold text-lg">
+                          ⏳ Order Waiting
+                        </p>
+                        <p className="text-sm text-yellow-600 mt-2">
+                          Your order is waiting to be picked up by the kitchen
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Progress Bar Section - Only show for preparing/ready */}
+                  {(order.status === "preparing" ||
+                    order.status === "ready") && (
+                    <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-blue-200">
+                      <h3 className="font-bold text-slate-900 mb-4">
+                        🍳 Live Order Progress
+                      </h3>
+                      <OrderProgressBar
+                        progress={orderProgressMap[order._id]?.progress || 0}
+                        status={
+                          (orderProgressMap[order._id]?.status ||
+                            order.status ||
+                            "preparing") as "pending" | "preparing" | "ready"
+                        }
+                        showPercentage={true}
+                        showStatus={true}
+                        size="md"
+                      />
+                    </div>
+                  )}
+
+                  {/* Served Order Message */}
+                  {order.status === "served" && (
+                    <div className="bg-linear-to-r from-green-100 to-emerald-100 rounded-xl p-6 mb-6 border-2 border-green-400">
+                      <p className="text-green-700 font-bold text-lg text-center">
+                        ✅ Order Ready! Ready for pickup
+                      </p>
+                    </div>
+                  )}
+
                   <div className="border-t-2 border-slate-100 pt-4">
                     {order.items.map((item, idx) => (
                       <div
@@ -1314,45 +1496,40 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
                 </div>
               ))}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+                {/* Order More - Always visible */}
                 <button
                   onClick={() => setStage("menu")}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-all shadow-lg"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-all shadow-lg transform hover:scale-105"
                 >
                   ➕ Order More
                 </button>
 
+                {/* Cancel buttons - Only for pending orders */}
                 {myOrders.map((o) =>
                   o.status === "pending" ? (
                     <button
                       key={o._id}
                       onClick={() => cancelOrder(o._id, o.status)}
-                      className="bg-red-500 hover:bg-red-600 text-white font-black py-2 px-4 rounded-xl transition-all shadow-lg"
+                      className="bg-red-500 hover:bg-red-600 text-white font-black py-3 px-4 rounded-xl transition-all shadow-lg transform hover:scale-105"
                     >
-                      ❌ Cancel Order
+                      ❌ Cancel Order #{o._id.slice(-6)}
                     </button>
-                  ) : (
-                    <button
-                      key={o._id}
-                      disabled
-                      className="bg-gray-400 text-white font-black py-2 px-4 rounded-xl cursor-not-allowed"
-                    >
-                      ❌ Cancel Order
-                    </button>
-                  ),
+                  ) : null,
                 )}
 
+                {/* Show "Get Bill" and "Pay Now" when all orders are served */}
                 {allOrdersServed && (
                   <>
                     <button
                       onClick={handleGetBill}
-                      className="bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-xl transition-all shadow-lg"
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-xl transition-all shadow-lg transform hover:scale-105"
                     >
                       🧾 Get Bill
                     </button>
                     <button
                       onClick={handleProceedToPayment}
-                      className="bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all shadow-lg"
+                      className="bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all shadow-lg transform hover:scale-105"
                     >
                       💳 Pay Now
                     </button>
@@ -1361,12 +1538,13 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
               </div>
 
               {!allOrdersServed && (
-                <div className="bg-blue-100 border-2 border-blue-300 rounded-xl p-6 text-center">
+                <div className="bg-blue-100 border-2 border-blue-300 rounded-xl p-6 text-center mt-8 animate-pulse">
                   <p className="text-blue-800 font-bold">
-                    ⏱️ Waiting for all orders to be served before payment...
+                    🍳 Preparing your order...
                   </p>
                   <p className="text-sm text-blue-600 mt-2">
-                    Auto-refreshing every 3 seconds
+                    {myOrders.filter((o) => o.status !== "served").length}{" "}
+                    order(s) still being prepared
                   </p>
                 </div>
               )}

@@ -21,6 +21,7 @@ interface IOrder extends Document {
   items: IOrderItem[];
   status: OrderStatus;
   totalAmount: number;
+  progress: number; // 0-100% order progress
   createdAt: Date;
   updatedAt: Date;
   canceledAt?: Date; // ← optional: when canceled
@@ -46,6 +47,7 @@ const orderSchema = new Schema<IOrder>(
       default: "pending",
     },
     totalAmount: { type: Number, default: 0 },
+    progress: { type: Number, default: 0, min: 0, max: 100 }, // 0-100%
     completedAt: { type: Date, default: null },
     canceledAt: {
       type: Date,

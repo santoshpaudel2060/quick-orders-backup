@@ -2,6 +2,7 @@ import Table from "../models/Table.model.js";
 import Order from "../models/Order.model.js";
 import { Request, Response } from "express";
 import QRCode from "qrcode";
+import { startOrderTracking } from "../services/orderTracking.service.js";
 
 export const addOrder = async (req: Request, res: Response) => {
   try {
@@ -37,11 +38,15 @@ export const addOrder = async (req: Request, res: Response) => {
       items,
       status: "pending",
       totalAmount,
+      progress: 0, // Initialize progress to 0%
     });
     await order.save();
 
     const io = req.app.get("io");
     io.emit("new-order", order);
+
+    // DO NOT automatically track - wait for kitchen staff to manually change status
+    // Only emit the new order event
 
     res.json({ message: "Order added", table, order });
   } catch (error) {
@@ -151,10 +156,20 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       return res.status(400).json({ message: `Invalid status: ${status}` });
     }
 
+    // Determine progress based on status
+    let progressValue = 0;
+    if (status === "pending") progressValue = 0;
+    else if (status === "preparing")
+      progressValue = 10; // Start at 10% when kitchen starts
+    else if (status === "ready")
+      progressValue = 95; // Show 95% when ready
+    else if (status === "served") progressValue = 100; // Show 100% when served
+
     const order = await Order.findByIdAndUpdate(
       id,
       {
         status,
+        progress: progressValue,
         completedAt:
           status === "served" || status === "paid" ? new Date() : undefined,
       },
@@ -165,10 +180,34 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    console.log(`Order ${id} status updated to ${status}`);
+    console.log(
+      `Order ${id} status updated to ${status} | Progress: ${progressValue}%`,
+    );
 
     const io = req.app.get("io");
-    io.emit("order-status-updated", order);
+
+    // Emit immediate status update to all clients
+    io.emit("order-status-updated", {
+      ...order.toObject(),
+      progress: progressValue,
+      status,
+    });
+
+    // Also emit a specific progress update event
+    io.emit("order-progress", {
+      orderId: order._id.toString(),
+      progress: progressValue,
+      status,
+    });
+
+    // If status is changing to "preparing", start automatic progress tracking
+    if (status === "preparing") {
+      console.log(`Starting automatic progress tracking for order ${id}`);
+      startOrderTracking(order._id.toString(), io, {
+        progressIncrement: 3, // 3% per interval
+        updateInterval: 2000, // Update every 2 seconds
+      });
+    }
 
     if (status === "served") {
       await Table.updateOne(
