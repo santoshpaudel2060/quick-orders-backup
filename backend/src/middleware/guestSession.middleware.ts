@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import GuestSession from "../models/GuestSession.model.js";
 
-interface GuestSessionRequest extends Request {
+export interface GuestSessionRequest extends Request {
   guestSession?: any;
   sessionId?: string;
 }
