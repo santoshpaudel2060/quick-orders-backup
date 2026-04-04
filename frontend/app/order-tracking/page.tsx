@@ -85,9 +85,9 @@ export default function OrderTrackingPage() {
 
     if (tableNumber || sessionId) {
       fetchOrders();
-      // Optionally refresh orders every 30 seconds
-      const interval = setInterval(fetchOrders, 30000);
-      return () => clearInterval(interval);
+      // REMOVED: Polling has been disabled
+      // Socket.io is now the sole source of truth for real-time updates
+      // Orders are fetched only once on page load
     }
   }, [tableNumber, sessionId, subscribeToOrder]);
 

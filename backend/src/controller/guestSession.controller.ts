@@ -68,16 +68,20 @@ export const validateGuestSession = async (req: Request, res: Response) => {
 
     if (!sessionId) {
       return res.status(400).json({
+        success: false,
         message: "Session ID is required",
       });
     }
 
+    console.log(`Validating guest session: ${sessionId}`);
+
     const session = await GuestSession.findOne({
-      sessionId,
+      sessionId: sessionId,
       isActive: true,
     });
 
     if (!session) {
+      console.log(`Session ${sessionId} not found or inactive`);
       return res.status(404).json({
         success: false,
         message: "Session not found or expired",
@@ -105,8 +109,9 @@ export const validateGuestSession = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Validate guest session error:", error);
     return res.status(500).json({
+      success: false,
       message: "Failed to validate session",
-      error,
+      error: process.env.NODE_ENV === "development" ? error : undefined,
     });
   }
 };

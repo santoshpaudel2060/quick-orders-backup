@@ -210,9 +210,9 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     subscribeToOrder,
     orderProgress: hookOrderProgress,
   } = useOrderTracking();
-  // Map of orderId -> { progress: number, status: string, lastUpdate: number }
+  // Map of orderId -> { progress: number, status: string }
   const [orderProgressMap, setOrderProgressMap] = useState<{
-    [key: string]: { progress: number; status: string; lastUpdateTime: number };
+    [key: string]: { progress: number; status: string };
   }>({});
 
   // eSewa payment states
@@ -359,22 +359,13 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
 
         // Only initialize if not already in map
         if (!newProgressMap[orderId]) {
-          const existingData = newProgressMap[orderId];
-          const lastUpdateTime = existingData?.lastUpdateTime || Date.now();
-
-          const calculatedProgress = getProgressByStatus(
-            order.status,
-            lastUpdateTime,
-          );
-
           newProgressMap[orderId] = {
-            progress: calculatedProgress,
+            progress: order.status === "preparing" ? 5 : order.progress || 0,
             status: order.status,
-            lastUpdateTime: Date.now(),
           };
 
           console.log(
-            `📊 Initialized Order ${orderId.slice(-6)}: ${order.status} → ${calculatedProgress}%`,
+            `📊 Initialized Order ${orderId.slice(-6)}: ${order.status} → ${order.progress || 0}%`,
           );
         }
       });
@@ -394,7 +385,6 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
           updated[orderId] = {
             progress: progressData.progress,
             status: progressData.status,
-            lastUpdateTime: Date.now(),
           };
           console.log(
             `📡 Socket.io synced Order ${orderId.slice(-6)}: ${progressData.status} → ${progressData.progress}%`,
@@ -405,57 +395,8 @@ export default function CustomerApp({ onBack }: { onBack?: () => void }) {
     }
   }, [hookOrderProgress]);
 
-  // Refresh progress display for smooth animation
-  useEffect(() => {
-    const animationInterval = setInterval(() => {
-      setOrderProgressMap((prev) => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach((orderId) => {
-          const data = updated[orderId];
-          if (data.status !== "served" && data.progress < 99) {
-            data.progress = getProgressByStatus(
-              data.status,
-              data.lastUpdateTime,
-            );
-          }
-        });
-        return updated;
-      });
-    }, 500); // Update every 500ms for smooth animation
-
-    return () => clearInterval(animationInterval);
-  }, []);
-
-  // Helper function to calculate progress based on status and elapsed time
-  const getProgressByStatus = (
-    status: string,
-    lastUpdateTime: number,
-  ): number => {
-    const now = Date.now();
-    const elapsedSeconds = (now - lastUpdateTime) / 1000;
-
-    switch (status) {
-      case "pending":
-        // Start at 5%, slowly increment towards 10%
-        return Math.min(5 + elapsedSeconds * 0.5, 10);
-
-      case "preparing":
-        // Start at 10%, increment towards 90% over time
-        const preparingProgress = 10 + elapsedSeconds * 0.8;
-        return Math.min(preparingProgress, 90);
-
-      case "ready":
-        // Stay between 90-95%
-        return 95;
-
-      case "served":
-        // Complete
-        return 100;
-
-      default:
-        return 0;
-    }
-  };
+  // NO animation interval - socket updates are the source of truth
+  // Removed the old animation interval that was causing conflicts
 
   // Subscribe to orders when they're fetched (Socket.io subscription)
   useEffect(() => {

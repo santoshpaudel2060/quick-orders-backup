@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useOrderTracking } from "../hooks/useOrderTracking";
 import OrderProgressBar from "./OrderProgressBar";
 import axios from "axios";
@@ -35,59 +35,50 @@ export const OrderTrackingCard: React.FC<OrderTrackingCardProps> = ({
     unsubscribeFromOrder,
     orderProgress,
   } = useOrderTracking();
-  const [progress, setProgress] = useState(order.progress || 0);
+
+  // IMPORTANT: Initialize ONLY ONCE - never reinitialize from order prop changes
+  const [progress, setProgress] = useState<number>(
+    order.status === "preparing" ? 5 : order.progress || 0,
+  );
   const [status, setStatus] = useState(order.status);
   const [completedAt, setCompletedAt] = useState(order.completedAt);
 
+  // Track if we've already subscribed to prevent duplicate subscriptions
+  const subscribedRef = useRef(false);
+
+  // Subscribe only once on first mount
   useEffect(() => {
-    subscribeToOrder(order._id);
+    if (!subscribedRef.current) {
+      console.log(`Subscribing to order ${order._id}`);
+      subscribeToOrder(order._id);
+      subscribedRef.current = true;
+    }
 
     return () => {
-      unsubscribeFromOrder(order._id);
+      if (subscribedRef.current) {
+        console.log(`Unsubscribing from order ${order._id}`);
+        unsubscribeFromOrder(order._id);
+        subscribedRef.current = false;
+      }
     };
-  }, [order._id, subscribeToOrder, unsubscribeFromOrder]);
+  }, []); // Empty deps - run only once on mount/unmount
 
-  // Update local state when order progress changes
+  // ONLY listen to socket updates - NEVER re-run when anything else changes
   useEffect(() => {
     const trackingData = getOrderProgress(order._id);
     if (trackingData) {
-      console.log(`💾 Updating progress for order ${order._id}:`, trackingData);
+      // Always accept socket updates - they're the source of truth
+      console.log(`📡 Socket: ${trackingData.progress}%`);
       setProgress(trackingData.progress);
       setStatus(trackingData.status);
-      setCompletedAt(trackingData.completedAt);
-    }
-  }, [order._id, orderProgress]);
-
-  // Poll for fresh order data every 3 seconds as a fallback
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      try {
-        // Try to get the order details by fetching all orders for this table
-        // This ensures we get the latest progress even if Socket.io misses events
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/orders/table/${order.tableNumber}`,
-        );
-        const orders = Array.isArray(response.data)
-          ? response.data
-          : [response.data];
-        const freshOrder = orders.find((o: any) => o._id === order._id);
-
-        if (freshOrder) {
-          console.log(
-            `🔄 Polling fresh data for order ${order._id}:`,
-            freshOrder,
-          );
-          setProgress(freshOrder.progress || 0);
-          setStatus(freshOrder.status);
-          setCompletedAt(freshOrder.completedAt);
-        }
-      } catch (error) {
-        console.error(`Failed to poll order ${order._id}:`, error);
+      if (trackingData.completedAt) {
+        setCompletedAt(trackingData.completedAt);
       }
-    }, 3000);
+    }
+  }, [orderProgress]); // ONLY depends on socket data
 
-    return () => clearInterval(pollInterval);
-  }, [order._id]);
+  // REMOVED: Polling has been disabled to prevent conflicts with socket updates
+  // Socket.io is now the sole source of truth for progress updates
 
   const getStatusBgColor = (status: string) => {
     switch (status) {

@@ -2,7 +2,10 @@ import Table from "../models/Table.model.js";
 import Order from "../models/Order.model.js";
 import { Request, Response } from "express";
 import QRCode from "qrcode";
-import { startOrderTracking } from "../services/orderTracking.service.js";
+import {
+  startOrderTracking,
+  stopOrderTracking,
+} from "../services/orderTracking.service.js";
 
 export const addOrder = async (req: Request, res: Response) => {
   try {
@@ -158,23 +161,25 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     // Determine progress based on status
     let progressValue = 0;
-    if (status === "pending") progressValue = 0;
-    else if (status === "preparing")
-      progressValue = 10; // Start at 10% when kitchen starts
-    else if (status === "ready")
-      progressValue = 95; // Show 95% when ready
-    else if (status === "served") progressValue = 100; // Show 100% when served
+    let updateData: any = { status };
 
-    const order = await Order.findByIdAndUpdate(
-      id,
-      {
-        status,
-        progress: progressValue,
-        completedAt:
-          status === "served" || status === "paid" ? new Date() : undefined,
-      },
-      { new: true },
-    );
+    if (status === "pending") {
+      progressValue = 0;
+      updateData.progress = 0;
+    } else if (status === "ready") {
+      progressValue = 95;
+      updateData.progress = 95;
+    } else if (status === "served") {
+      progressValue = 100;
+      updateData.progress = 100;
+      updateData.completedAt = new Date();
+    } else if (status === "preparing") {
+      // Start at 5% when transitioning to preparing
+      updateData.progress = 5;
+      progressValue = 5;
+    }
+
+    const order = await Order.findByIdAndUpdate(id, updateData, { new: true });
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -186,26 +191,33 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     const io = req.app.get("io");
 
-    // Emit immediate status update to all clients
-    io.emit("order-status-updated", {
-      ...order.toObject(),
-      progress: progressValue,
-      status,
-    });
+    // Stop tracking if transitioning away from "preparing"
+    if (status !== "preparing") {
+      console.log(`Stopping automatic progress tracking for order ${id}`);
+      stopOrderTracking(order._id.toString());
 
-    // Also emit a specific progress update event
-    io.emit("order-progress", {
-      orderId: order._id.toString(),
-      progress: progressValue,
-      status,
-    });
+      // Emit final progress value when transitioning to ready/served
+      if (status === "ready" || status === "served") {
+        io.emit("order-progress", {
+          orderId: order._id.toString(),
+          progress: progressValue,
+          status,
+          tableNumber: order.tableNumber,
+        });
+      }
+    }
 
     // If status is changing to "preparing", start automatic progress tracking
     if (status === "preparing") {
       console.log(`Starting automatic progress tracking for order ${id}`);
+
+      // First, stop any existing tracker to prevent duplicates
+      stopOrderTracking(order._id.toString());
+
+      // Start tracking - smooth progress updates more frequently
       startOrderTracking(order._id.toString(), io, {
-        progressIncrement: 3, // 3% per interval
-        updateInterval: 2000, // Update every 2 seconds
+        progressIncrement: 1, // 1% per interval for super smooth progression
+        updateInterval: 500, // Update every 500ms = 2x per second = smooth 120 progress/min
       });
     }
 

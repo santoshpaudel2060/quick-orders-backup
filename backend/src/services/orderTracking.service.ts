@@ -1,5 +1,6 @@
 import Order from "../models/Order.model.js";
 import { Server } from "socket.io";
+import type { OrderStatus } from "../models/Order.model.js";
 
 interface TrackingConfig {
   progressIncrement: number; // How much progress to add per interval (e.g., 2-5%)
@@ -13,6 +14,8 @@ const DEFAULT_CONFIG: TrackingConfig = {
 
 // Map to store active tracking intervals for orders
 const activeTrackers = new Map<string, NodeJS.Timeout>();
+// Map to track if a tracking start is in progress (prevent race conditions)
+const trackingStartInProgress = new Set<string>();
 
 /**
  * Get status based on progress percentage
@@ -35,11 +38,14 @@ export const startOrderTracking = (
 ) => {
   const mergedConfig = { ...DEFAULT_CONFIG, ...config };
 
-  // Prevent duplicate tracking
-  if (activeTrackers.has(orderId)) {
-    console.log(`Order ${orderId} is already being tracked`);
+  // Prevent duplicate tracking - check both active trackers and in-progress starts
+  if (activeTrackers.has(orderId) || trackingStartInProgress.has(orderId)) {
+    console.log(`Order ${orderId} tracking already started or in progress`);
     return;
   }
+
+  // Mark as starting to prevent race conditions
+  trackingStartInProgress.add(orderId);
 
   console.log(`Starting tracking for order ${orderId}`);
 
@@ -50,6 +56,7 @@ export const startOrderTracking = (
         // Order deleted, stop tracking
         clearInterval(interval);
         activeTrackers.delete(orderId);
+        trackingStartInProgress.delete(orderId);
         return;
       }
 
@@ -61,71 +68,88 @@ export const startOrderTracking = (
       ) {
         clearInterval(interval);
         activeTrackers.delete(orderId);
+        trackingStartInProgress.delete(orderId);
         console.log(`Stopped tracking for order ${orderId} (${order.status})`);
+        return;
+      }
+
+      // Increment progress only if status is still "preparing"
+      if (order.status !== "preparing") {
+        clearInterval(interval);
+        activeTrackers.delete(orderId);
+        trackingStartInProgress.delete(orderId);
+        console.log(
+          `Order ${orderId} is no longer preparing, stopping tracker`,
+        );
         return;
       }
 
       // Increment progress
       let newProgress = order.progress + mergedConfig.progressIncrement;
 
-      // Cap at 100%
-      if (newProgress > 100) {
-        newProgress = 100;
+      // Cap at 95% when status is "preparing" to allow manual status change to "ready"
+      if (newProgress > 95) {
+        newProgress = 95;
       }
 
-      // Update status based on progress
-      const newStatus = getStatusByProgress(newProgress);
-
-      // Set completedAt when reaching 100%
-      let completedAt = order.completedAt;
-      if (newProgress === 100 && !completedAt) {
-        completedAt = new Date();
+      // Don't update if progress hasn't changed significantly
+      if (newProgress === order.progress) {
+        return;
       }
 
       // Update order in database
-      await Order.findByIdAndUpdate(
+      const updatedOrder = await Order.findByIdAndUpdate(
         orderId,
         {
           progress: newProgress,
-          status: newStatus,
-          completedAt,
+          // Keep existing status - don't auto-update based on progress
         },
         { new: true },
       );
 
-      // Emit progress update via Socket.io
+      if (!updatedOrder) return;
+
+      // IMPORTANT: Only emit if we actually updated the progress
+      // This prevents duplicate/conflicting events
       io.emit("order-progress", {
-        orderId,
+        orderId: updatedOrder._id.toString(),
         progress: newProgress,
-        status: newStatus,
-        completedAt,
-        tableNumber: order.tableNumber,
+        status: updatedOrder.status,
+        completedAt: updatedOrder.completedAt,
+        tableNumber: updatedOrder.tableNumber,
       });
 
       console.log(
-        `Order ${orderId}: Progress ${newProgress}% | Status: ${newStatus}`,
+        `Order ${orderId}: Progress ${newProgress}% | Status: ${updatedOrder.status}`,
       );
 
-      // Stop tracking when order is ready (100%)
-      if (newProgress === 100) {
+      // Stop tracking when status becomes "served" or "paid"
+      if (
+        (updatedOrder.status as OrderStatus) === "served" ||
+        (updatedOrder.status as OrderStatus) === "paid"
+      ) {
         clearInterval(interval);
         activeTrackers.delete(orderId);
-        console.log(`Order ${orderId} is ready!`);
+        trackingStartInProgress.delete(orderId);
+        console.log(`Order ${orderId} is ${updatedOrder.status}!`);
 
         // Emit completion event
         io.emit("order-completed", {
           orderId,
-          tableNumber: order.tableNumber,
-          message: `Order for table ${order.tableNumber} is ready!`,
+          tableNumber: updatedOrder.tableNumber,
+          message: `Order for table ${updatedOrder.tableNumber} is ready!`,
         });
       }
     } catch (error) {
       console.error(`Error updating order ${orderId}:`, error);
       clearInterval(interval);
       activeTrackers.delete(orderId);
+      trackingStartInProgress.delete(orderId);
     }
   }, mergedConfig.updateInterval);
 
+  // Remove from starting set and add to active trackers
+  trackingStartInProgress.delete(orderId);
   activeTrackers.set(orderId, interval);
 };
 
@@ -137,6 +161,7 @@ export const stopOrderTracking = (orderId: string) => {
   if (interval) {
     clearInterval(interval);
     activeTrackers.delete(orderId);
+    trackingStartInProgress.delete(orderId);
     console.log(`Stopped tracking for order ${orderId}`);
   }
 };
@@ -147,6 +172,7 @@ export const stopOrderTracking = (orderId: string) => {
 export const stopAllTracking = () => {
   activeTrackers.forEach((interval) => clearInterval(interval));
   activeTrackers.clear();
+  trackingStartInProgress.clear();
   console.log("Stopped all order tracking");
 };
 

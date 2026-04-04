@@ -60,22 +60,27 @@ export const useOrderTracking = (): UseOrderTrackingReturn => {
       });
     });
 
-    // Listen for order status updates (immediate from kitchen clicks)
-    newSocket.on("order-status-updated", (order: any) => {
-      console.log(
-        "🔄 Order status updated:",
-        order._id,
-        order.status,
-        order.progress,
-      );
+    // Legacy: Listen for status change events if still being sent
+    newSocket.on("order-status-changed", (data: any) => {
+      console.log("📋 Order status changed:", data.orderId, data.status);
+      // Only update status if progress data doesn't exist
+      // Otherwise let order-progress handle everything
       setOrderProgress((prev) => {
         const updated = new Map(prev);
-        updated.set(order._id, {
-          orderId: order._id,
-          progress: order.progress || 0,
-          status: order.status,
-          tableNumber: order.tableNumber,
-        });
+        const existing = updated.get(data.orderId);
+        if (!existing) {
+          updated.set(data.orderId, {
+            orderId: data.orderId,
+            progress: 5, // Start at 5% for preparing
+            status: data.status,
+            tableNumber: data.tableNumber,
+          });
+        } else {
+          updated.set(data.orderId, {
+            ...existing,
+            status: data.status,
+          });
+        }
         return updated;
       });
     });
