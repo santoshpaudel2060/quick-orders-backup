@@ -43,6 +43,41 @@ import guestSessionRoutes from "./routes/guestSession.route.js";
 
 dotenv.config();
 
+// Global error handlers for better debugging
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️  Unhandled Rejection!");
+  console.error("Promise:", promise);
+  console.error("Reason:", reason);
+  try {
+    console.error("Reason JSON:", JSON.stringify(reason, null, 2));
+  } catch (e) {
+    console.error("Could not stringify reason");
+  }
+  if (reason instanceof Error) {
+    console.error("Error message:", reason.message);
+    console.error("Stack trace:", reason.stack);
+  }
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("💥 UNCAUGHT EXCEPTION!");
+  console.error("Error object:", error);
+  try {
+    console.error("Error as JSON:", JSON.stringify(error, null, 2));
+  } catch (e) {
+    console.error("Could not stringify error");
+  }
+  if (error instanceof Error) {
+    console.error("Error message:", error.message);
+    console.error("Error name:", error.name);
+    console.error("Stack trace:", error.stack);
+  } else {
+    console.error("Error type:", typeof error);
+    console.error("Error keys:", Object.keys(error as any));
+  }
+  process.exit(1);
+});
+
 // Initialize and start server
 const startServer = async () => {
   try {
@@ -100,7 +135,12 @@ const startServer = async () => {
     app.use("/api/payments", paymentRoutes);
     app.use("/api/guest-session", guestSessionRoutes);
 
-    const PORT = process.env.PORT || 5000;
+    const portString = process.env.PORT || "5000";
+    const PORT = parseInt(portString, 10);
+
+    if (isNaN(PORT)) {
+      throw new Error(`Invalid PORT: ${portString}`);
+    }
 
     const httpServer = createServer(app);
 
@@ -121,11 +161,42 @@ const startServer = async () => {
       });
     });
 
-    httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    // Function to find an available port
+    const startServerOnAvailablePort = (startPort: number) => {
+      console.log(`Attempting to start server on port ${startPort}...`);
+      const server = httpServer;
+
+      server.listen(startPort, () => {
+        console.log(`✓ Server running on port ${startPort}`);
+      });
+
+      server.on("error", (err: any) => {
+        console.error(
+          `Server error on port ${startPort}:`,
+          err.code,
+          err.message,
+        );
+        if (err.code === "EADDRINUSE") {
+          console.log(
+            `Port ${startPort} is already in use, trying port ${startPort + 1}...`,
+          );
+          server.close();
+          startServerOnAvailablePort(startPort + 1);
+        } else {
+          console.error("Fatal server error:", err);
+          process.exit(1);
+        }
+      });
+    };
+
+    startServerOnAvailablePort(PORT);
   } catch (error) {
-    console.error("Failed to start server:", error);
+    if (error instanceof Error) {
+      console.error("Failed to start server:", error.message);
+      console.error(error.stack);
+    } else {
+      console.error("Failed to start server:", error);
+    }
     process.exit(1);
   }
 };
